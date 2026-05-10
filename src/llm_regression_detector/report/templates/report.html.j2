@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Eval report — {{ candidate.run_id }}</title>
+  <style>
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e;
+      --card: #161b22; --border: #30363d;
+      --green: #3fb950; --yellow: #d29922; --red: #f85149; --blue: #58a6ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; background: var(--bg); color: var(--fg);
+           font: 14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; }
+    h1, h2 { margin: 0 0 12px; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; margin-top: 32px; }
+    .muted { color: var(--muted); }
+    .card { background: var(--card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+    .metric { text-align: left; }
+    .metric .value { font-size: 24px; font-weight: 600; }
+    .metric .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .metric .sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px;
+             font-size: 12px; font-weight: 600; }
+    .badge-info     { background: rgba(63, 185, 80, .15); color: var(--green); }
+    .badge-warning  { background: rgba(210, 153, 34, .15); color: var(--yellow); }
+    .badge-critical { background: rgba(248, 81, 73, .15); color: var(--red); }
+    .delta-positive { color: var(--green); }
+    .delta-negative { color: var(--red); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    code { background: rgba(110, 118, 129, .2); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+    .pill-pass { color: var(--green); }
+    .pill-fail { color: var(--red); }
+    .num-right { text-align: right; }
+    a { color: var(--blue); }
+  </style>
+</head>
+<body>
+  <h1>Eval report</h1>
+  <p class="muted">
+    Candidate <code>{{ candidate.run_id }}</code>
+    {% if baseline %} vs baseline <code>{{ baseline.run_id }}</code>{% endif %}
+    · {{ candidate.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}
+  </p>
+
+  {% if diff %}
+  <div class="card">
+    <span class="badge badge-{{ diff.severity.value }}">{{ diff.severity.value | upper }}</span>
+    <span style="margin-left: 8px;">
+      Accuracy
+      <strong class="{% if diff.accuracy_delta >= 0 %}delta-positive{% else %}delta-negative{% endif %}">
+        {{ '%+.2f' % (diff.accuracy_delta * 100) }} pp
+      </strong>
+      vs baseline ·
+      <span class="muted">
+        {% if diff.is_significant %}
+          95% CIs do not overlap — change is statistically significant
+        {% else %}
+          95% CIs overlap — change may be within noise
+        {% endif %}
+      </span>
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="grid-5">
+    <div class="card metric">
+      <div class="label">Accuracy</div>
+      <div class="value">{{ '%.1f' % (candidate.summary.accuracy * 100) }}%</div>
+      <div class="sub">95% CI {{ '%.1f' % (candidate.summary.accuracy_ci_low * 100) }}–{{ '%.1f' % (candidate.summary.accuracy_ci_high * 100) }}%</div>
+    </div>
+    <div class="card metric">
+      <div class="label">Summary score</div>
+      <div class="value">{{ '%.2f' % candidate.summary.avg_summary_score }}<span class="sub" style="font-size:14px;"> / 5</span></div>
+    </div>
+    <div class="card metric">
+      <div class="label">Latency p50 / p95</div>
+      <div class="value">{{ '%.0f' % candidate.summary.latency_p50_ms }} / {{ '%.0f' % candidate.summary.latency_p95_ms }}<span class="sub" style="font-size:14px;"> ms</span></div>
+      <div class="sub">p99 {{ '%.0f' % candidate.summary.latency_p99_ms }} ms</div>
+    </div>
+    <div class="card metric">
+      <div class="label">Tokens (in / out)</div>
+      <div class="value" style="font-size:18px;">
+        {{ candidate.summary.total_prompt_tokens }} / {{ candidate.summary.total_completion_tokens }}
+      </div>
+    </div>
+    <div class="card metric">
+      <div class="label">Estimated cost</div>
+      <div class="value">
+        {% if candidate.summary.estimated_cost_usd > 0 %}
+          ${{ '%.4f' % candidate.summary.estimated_cost_usd }}
+        {% else %}
+          <span class="muted">$0 (free tier)</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if candidate.summary.per_category %}
+  <h2>Per-category accuracy</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Category</th><th class="num-right">Accuracy</th><th class="num-right">Passed / Total</th></tr>
+      </thead>
+      <tbody>
+        {% for cat in candidate.summary.per_category %}
+        <tr>
+          <td><code>{{ cat.category }}</code></td>
+          <td class="num-right">{{ '%.1f' % (cat.accuracy * 100) }}%</td>
+          <td class="num-right">{{ cat.cases_passed }}/{{ cat.cases_total }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if diff and diff.regressions %}
+  <h2>Regressions ({{ diff.regressions | length }})</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th>Δ summary</th></tr>
+      </thead>
+      <tbody>
+        {% for r in diff.regressions %}
+        <tr>
+          <td><code>{{ r.case_id }}</code></td>
+          <td class="pill-pass">PASS ({{ r.baseline_summary_score }})</td>
+          <td class="pill-fail">FAIL ({{ r.candidate_summary_score }})</td>
+          <td>{{ '%+d' % (r.candidate_summary_score - r.baseline_summary_score) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if diff and diff.improvements %}
+  <h2>Improvements ({{ diff.improvements | length }})</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th>Δ summary</th></tr>
+      </thead>
+      <tbody>
+        {% for i in diff.improvements %}
+        <tr>
+          <td><code>{{ i.case_id }}</code></td>
+          <td class="pill-fail">FAIL ({{ i.baseline_summary_score }})</td>
+          <td class="pill-pass">PASS ({{ i.candidate_summary_score }})</td>
+          <td>{{ '%+d' % (i.candidate_summary_score - i.baseline_summary_score) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <h2>All cases</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Case</th><th>Predicted</th><th>Status</th><th>Score</th><th>Latency</th></tr>
+      </thead>
+      <tbody>
+        {% for c in candidate.results %}
+        <tr>
+          <td><code>{{ c.case_id }}</code></td>
+          <td><code>{{ c.predicted_category }}</code> — {{ c.predicted_summary | truncate(60) }}</td>
+          <td class="{% if c.passed %}pill-pass{% else %}pill-fail{% endif %}">
+            {{ 'PASS' if c.passed else 'FAIL' }}
+          </td>
+          <td>{{ c.judge.summary_score }}/5</td>
+          <td>{{ '%.0f' % c.latency_ms }} ms</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="muted" style="margin-top: 32px;">
+    Generated by
+    <a href="https://github.com/adelsaoud/llm-regression-detector">llm-regression-detector</a>.
+  </p>
+</body>
+</html>

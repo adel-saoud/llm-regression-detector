@@ -1,0 +1,158 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-regression-detector"
+version = "0.1.0"
+description = "CI/CD pipeline that catches LLM quality regressions before they reach production."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Adel Saoud" }]
+keywords = ["llm", "evaluation", "regression-testing", "ci-cd", "llm-as-judge"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+
+dependencies = [
+    "litellm>=1.83",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "typer>=0.15",
+    "rich>=13.9",
+    "structlog>=24.4",
+    "jinja2>=3.1",
+    "aiosqlite>=0.20",
+    "tenacity>=9.0",
+]
+
+[project.optional-dependencies]
+dashboard = ["streamlit>=1.40", "plotly>=5.24", "pandas>=2.2"]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "pytest-mock>=3.14",
+    "ruff>=0.8",
+    "pyright>=1.1.390",
+    "pre-commit>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/adelsaoud/llm-regression-detector"
+Repository = "https://github.com/adelsaoud/llm-regression-detector"
+Issues = "https://github.com/adelsaoud/llm-regression-detector/issues"
+
+[project.scripts]
+lrd = "llm_regression_detector.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_regression_detector"]
+# Non-Python assets shipped inside the package (Jinja2 templates, Streamlit
+# entry point) are picked up automatically via the package directory above.
+# `tool.hatch.build` includes everything except *.pyc / __pycache__ by default.
+
+# ── Ruff: lint + format ─────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",     # pycodestyle
+    "F",          # pyflakes
+    "I",          # isort
+    "B",          # bugbear
+    "C4",         # comprehensions
+    "UP",         # pyupgrade
+    "SIM",        # simplify
+    "RUF",        # ruff-specific
+    "N",          # pep8-naming
+    "ANN",        # type annotations
+    "S",          # bandit (security)
+    "PT",         # pytest style
+    "TID",        # tidy imports
+    "PL",         # pylint
+    "TRY",        # tryceratops
+]
+ignore = [
+    "ANN401",  # allow Any in narrow cases (e.g. **kwargs passthrough to litellm)
+    "PLR0912", # too many branches — formatters branch on optional report sections
+    "PLR0913", # too many arguments — fine for typer CLI handlers
+    "PLR0915", # too many statements — same as PLR0912
+    "PLR2004", # magic value comparisons — readable in context
+    "PLC0415", # local imports — used intentionally for lazy/streamlit imports
+    "PLW0108", # unnecessary lambda — pydantic Field default_factory needs callables
+    "TRY003",  # long exception messages are fine
+    "TRY004",  # ValueError vs TypeError — domain choice, ValueError is fine for parsing
+    "TRY301",  # abstract raise to inner func — overkill for inline branch + raise patterns
+    "RUF001",  # ambiguous unicode in strings — intentional (en dashes etc)
+    "RUF002",  # ambiguous unicode in docstrings — intentional
+    "RUF003",  # ambiguous unicode in comments — intentional
+    "S101",    # assert is fine (used in tests)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN", "PLR2004", "S101", "S105", "S106"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# ── Pyright: strict type checking ───────────────────────────────────────────
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+reportMissingTypeStubs = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownArgumentType = "warning"
+reportUnknownVariableType = "warning"
+
+# ── Pytest ───────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=llm_regression_detector",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: end-to-end tests using mock LLM (deselect with -m 'not integration')",
+]
+
+[tool.coverage.run]
+source = ["src/llm_regression_detector"]
+branch = true
+omit = [
+    # Streamlit UI surface — hard to unit-test, exercised by the dashboard itself
+    "src/llm_regression_detector/dashboard/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+fail_under = 85

@@ -1,0 +1,10 @@
+"""LLM regression detector — catch quality drops in LLM systems before they reach users."""
+
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("llm-regression-detector")
+except PackageNotFoundError:
+    __version__ = "0.0.0+local"
+
+__all__ = ["__version__"]

@@ -14,6 +14,9 @@
 
 ## What this is
 
+> Only **52% of enterprises** run any form of evaluation on their LLM systems.
+> *(LangChain, State of AI Agents 2026)*
+
 When you ship an LLM-powered feature, you're constantly tweaking the prompt — adding examples, rephrasing instructions, adjusting tone. Every change *could* silently break quality. Most teams only find out when users complain.
 
 **This project is a CI gate that catches those drops automatically.** On every pull request that touches a prompt, it:

@@ -143,11 +143,12 @@ if len(runs) >= 6:
 # ── Accuracy timeline with CI band ──────────────────────────────────────────
 
 st.subheader("Accuracy over time (95% CI band)")
-df_sorted = df.sort_values("timestamp")
+df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+x_labels = df_sorted["version"]
 fig = go.Figure()
 fig.add_trace(
     go.Scatter(
-        x=df_sorted["timestamp"],
+        x=x_labels,
         y=df_sorted["ci_high"],
         mode="lines",
         line={"width": 0},
@@ -157,7 +158,7 @@ fig.add_trace(
 )
 fig.add_trace(
     go.Scatter(
-        x=df_sorted["timestamp"],
+        x=x_labels,
         y=df_sorted["ci_low"],
         mode="lines",
         line={"width": 0},
@@ -169,21 +170,24 @@ fig.add_trace(
 )
 fig.add_trace(
     go.Scatter(
-        x=df_sorted["timestamp"],
+        x=x_labels,
         y=df_sorted["accuracy"],
         mode="lines+markers",
         name="accuracy",
         line={"color": "#58a6ff", "width": 2},
-        customdata=df_sorted[["run_id", "version", "passed", "total"]],
+        marker={"size": 8},
+        customdata=df_sorted[["run_id", "version", "passed", "total", "timestamp"]],
         hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
-            "version: %{customdata[1]}<br>"
+            "<b>%{customdata[1]}</b><br>"
             "accuracy: %{y:.1%}<br>"
-            "passed: %{customdata[2]}/%{customdata[3]}<extra></extra>"
+            "passed: %{customdata[2]}/%{customdata[3]}<br>"
+            "run: %{customdata[0]}<br>"
+            "time: %{customdata[4]|%Y-%m-%d %H:%M}<extra></extra>"
         ),
     )
 )
 fig.update_yaxes(tickformat=".0%", range=[0, 1.05])
+fig.update_xaxes(type="category")
 fig.update_layout(height=340, margin={"l": 0, "r": 0, "t": 20, "b": 0}, hovermode="x unified")
 st.plotly_chart(fig, width="stretch")
 

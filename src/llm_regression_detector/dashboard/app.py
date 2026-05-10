@@ -114,7 +114,10 @@ col1.metric(
     delta=(
         f"{(latest['accuracy'] - prev['accuracy']) * 100:+.2f} pp" if prev is not None else None
     ),
-    help=f"95% Wilson CI {latest['ci_low'] * 100:.1f}–{latest['ci_high'] * 100:.1f}% · delta vs previous run",
+    help=(
+        f"95% Wilson CI {latest['ci_low'] * 100:.1f}–{latest['ci_high'] * 100:.1f}%"
+        " · delta vs previous run"
+    ),
 )
 col2.metric(
     "Judge score",
@@ -215,7 +218,9 @@ with st.expander("Latency percentiles over time", expanded=False):
         labels={"version": "Version", "value": "Latency (ms)", "variable": "Percentile"},
     )
     fig_lat.for_each_trace(
-        lambda t: t.update(name=t.name.replace("p50_ms", "p50").replace("p95_ms", "p95").replace("p99_ms", "p99"))
+        lambda t: t.update(
+            name=t.name.replace("p50_ms", "p50").replace("p95_ms", "p95").replace("p99_ms", "p99")
+        )
     )
     fig_lat.update_xaxes(type="category")
     fig_lat.update_layout(height=280, margin={"l": 0, "r": 0, "t": 20, "b": 0})

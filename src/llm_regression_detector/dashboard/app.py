@@ -210,17 +210,20 @@ st.plotly_chart(fig, width="stretch")
 # ── Latency percentile timeline ─────────────────────────────────────────────
 
 with st.expander("Latency percentiles over time", expanded=False):
+    lat_df = pd.DataFrame(
+        {
+            "version": df_sorted["version"],
+            "p50": df_sorted["p50_ms"],
+            "p95": df_sorted["p95_ms"],
+            "p99": df_sorted["p99_ms"],
+        }
+    )
     fig_lat = px.line(
-        df_sorted,
+        lat_df,
         x="version",
-        y=["p50_ms", "p95_ms", "p99_ms"],
+        y=["p50", "p95", "p99"],
         markers=True,
         labels={"version": "Version", "value": "Latency (ms)", "variable": "Percentile"},
-    )
-    fig_lat.for_each_trace(
-        lambda t: t.update(
-            name=t.name.replace("p50_ms", "p50").replace("p95_ms", "p95").replace("p99_ms", "p99")
-        )
     )
     fig_lat.update_xaxes(type="category")
     fig_lat.update_layout(height=280, margin={"l": 0, "r": 0, "t": 20, "b": 0})

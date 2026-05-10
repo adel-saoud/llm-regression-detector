@@ -148,7 +148,7 @@ src/llm_regression_detector/
 
 prompts/               Versioned prompt YAMLs — the "code" being tested
 golden_dataset/        53 hand-labelled cases across 4 categories
-tests/                 78 tests · 89% coverage · fully hermetic
+tests/                 87 tests · 89% coverage · fully hermetic
 .github/workflows/     ci.yml — lint, type, test · eval.yml — runs on prompt changes
 ```
 
@@ -201,7 +201,7 @@ uv run pre-commit install
 uv run ruff check --fix .    # lint + autofix
 uv run ruff format .         # format
 uv run pyright               # type-check — must stay at 0 errors
-uv run pytest                # 78 tests, 89% coverage, gate at 85%
+uv run pytest                # 87 tests, 89% coverage, gate at 85%
 ```
 
 <br>

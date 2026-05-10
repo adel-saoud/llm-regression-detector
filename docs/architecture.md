@@ -105,4 +105,4 @@ collisions when multiple processes retry the same webhook.
 - **Pydantic v2 with `frozen=True, extra="forbid"`** — runtime validation doubles as documentation; serialisation for SQLite is `model_dump_json`. Strict-by-default.
 - **Schema-versioned SQLite** — `eval_runs` rows are tagged with `schema_version`; `_migrate_payload` forward-fills new fields with sensible defaults so old rows survive non-additive changes.
 - **Protocols over ABCs** for `Notifier` and `LLMClient` — duck-typed, no inheritance, trivial to test with `NullNotifier` / `MockLLMClient`.
-- **Mock provider in `llm.mock`** — the full pipeline runs offline with no keys, which is what makes the 78-test suite hermetic, the dev loop free, and the demo runnable in 3 seconds.
+- **Mock provider in `llm.mock`** — the full pipeline runs offline with no keys, which is what makes the 87-test suite hermetic, the dev loop free, and the demo runnable in 3 seconds.

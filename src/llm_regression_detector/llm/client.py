@@ -1,17 +1,20 @@
 """Unified async LLM client.
 
-Wraps ``litellm.Router`` with a tiered free-tier fallback chain:
+Wraps ``litellm.Router`` with a tiered fallback chain.  Priority order:
 
-1. Hugging Face Inference Providers (default model: ``openai/gpt-oss-20b:cheapest``)
-2. Google Gemini free tier (default model: ``gemini-2.0-flash``)
-3. Ollama (fully local; default model: ``llama3.2:3b``)
+0. Custom provider — ``LRD_CUSTOM_MODEL`` (any litellm model string, e.g.
+   ``anthropic/claude-haiku-4-5``, ``ollama/llama3.2:3b``, ``openai/gpt-4o``).
+   When set, this slots in as the highest-priority tier.  Use
+   ``LRD_CUSTOM_API_KEY`` / ``LRD_CUSTOM_API_BASE`` as companions.
+   ``ollama/`` models auto-detect the API base from ``OLLAMA_BASE_URL``.
+1. Hugging Face Inference Providers (``LRD_HF_MODEL``, requires ``HF_TOKEN``)
+2. Google Gemini free tier (``LRD_GEMINI_MODEL``, requires ``GEMINI_API_KEY``)
+3. Ollama fully local (``LRD_OLLAMA_MODEL``, no key required)
 
-Every model id is configurable via ``Settings`` (env vars ``LRD_HF_MODEL`` etc),
-so the project is genuinely model-agnostic — swapping to ``Llama-3.1-70B`` or
-``mistralai/Mistral-Nemo-Instruct`` is a one-line change.
+Every model id comes from ``Settings`` (env vars) — nothing is hardcoded.
 
 When no real credentials are present, ``build_client`` returns a deterministic
-mock so the full pipeline still runs end-to-end during development.
+mock so the full pipeline runs end-to-end offline during development.
 """
 
 from __future__ import annotations
@@ -96,47 +99,82 @@ class RouterClient:
 def _build_router(settings: Settings) -> Router:
     """Assemble the fallback chain from whatever credentials are configured.
 
-    All model ids come from ``Settings`` — there are no hardcoded provider
-    models in this function body.
-    """
-    model_list: list[dict[str, Any]] = []
+    Builds an ordered list of provider tiers.  The first tier claims
+    ``DEFAULT_MODEL_ALIAS`` (the name callers use); subsequent tiers get unique
+    group names wired into litellm's ``fallbacks`` cascade.
 
+    All model ids come from ``Settings`` — no provider models are hardcoded here.
+    """
+    # Each entry: (natural_name, litellm_params)
+    tiers: list[tuple[str, dict[str, Any]]] = []
+
+    # Tier 0 — custom model (explicit override, highest priority)
+    if settings.custom_model is not None:
+        params: dict[str, Any] = {"model": settings.custom_model}
+        if settings.custom_api_key is not None:
+            params["api_key"] = settings.custom_api_key.get_secret_value()
+        if settings.custom_api_base is not None:
+            params["api_base"] = settings.custom_api_base
+        elif settings.custom_model.startswith("ollama/"):
+            params["api_base"] = settings.ollama_base_url
+        tiers.append(("custom", params))
+
+    # Tier 1 — Hugging Face Inference Providers
     if settings.hf_token is not None:
-        model_list.append(
-            {
-                "model_name": DEFAULT_MODEL_ALIAS,
-                "litellm_params": {
+        tiers.append(
+            (
+                "hf",
+                {
                     "model": settings.hf_model,
                     "api_base": _HF_API_BASE,
                     "api_key": settings.hf_token.get_secret_value(),
                 },
-            }
+            )
         )
 
+    # Tier 2 — Google Gemini
     if settings.gemini_api_key is not None:
-        model_list.append(
-            {
-                "model_name": DEFAULT_MODEL_ALIAS,
-                "litellm_params": {
+        tiers.append(
+            (
+                "gemini",
+                {
                     "model": settings.gemini_model,
                     "api_key": settings.gemini_api_key.get_secret_value(),
                 },
-            }
+            )
         )
 
-    # Ollama is always available as a local fallback (no key required).
-    model_list.append(
-        {
-            "model_name": DEFAULT_MODEL_ALIAS,
-            "litellm_params": {
-                "model": settings.ollama_model,
-                "api_base": settings.ollama_base_url,
-            },
-        }
+    # Tier 3 — Ollama (always present unless custom model is already an Ollama model)
+    custom_is_ollama = settings.custom_model is not None and settings.custom_model.startswith(
+        "ollama/"
+    )
+    if not custom_is_ollama:
+        tiers.append(
+            (
+                "ollama",
+                {
+                    "model": settings.ollama_model,
+                    "api_base": settings.ollama_base_url,
+                },
+            )
+        )
+
+    # First tier = primary (DEFAULT_MODEL_ALIAS); the rest are named fallback groups.
+    model_list: list[dict[str, Any]] = []
+    fallback_names: list[str] = []
+    for i, (name, litellm_params) in enumerate(tiers):
+        group = DEFAULT_MODEL_ALIAS if i == 0 else name
+        model_list.append({"model_name": group, "litellm_params": litellm_params})
+        if i > 0:
+            fallback_names.append(group)
+
+    fallbacks: list[dict[str, list[str]]] = (
+        [{DEFAULT_MODEL_ALIAS: fallback_names}] if fallback_names else []
     )
 
     return Router(
         model_list=model_list,
+        fallbacks=fallbacks,  # pyright: ignore[reportArgumentType]
         num_retries=2,
         retry_after=1,
         routing_strategy="simple-shuffle",

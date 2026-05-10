@@ -29,7 +29,7 @@ class DriftReport(BaseModel):
     window_size: int = Field(ge=0)
 
 
-def analyse_drift(
+def analyze_drift(
     historical: Sequence[EvalRun],
     latest: EvalRun,
     *,

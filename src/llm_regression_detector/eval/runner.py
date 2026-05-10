@@ -70,7 +70,7 @@ class Runner:
 
         results = await asyncio.gather(*(self._evaluate(prompt, c, log) for c in cases))
         case_lookup = {c.id: c for c in cases}
-        summary = self._summarise(results, case_lookup)
+        summary = self._summarize(results, case_lookup)
 
         log.info(
             "eval.run.done",
@@ -140,7 +140,7 @@ class Runner:
                 raw_output=response.content,
             )
 
-    def _summarise(
+    def _summarize(
         self,
         results: list[CaseResult],
         cases: dict[str, GoldenCase],

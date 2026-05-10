@@ -57,6 +57,31 @@ class Settings(BaseSettings):
         validate_default=True,
     )
 
+    # ── Custom provider override (takes priority over all built-in tiers) ──
+    # Accepts any litellm model string, e.g.:
+    #   "ollama/llama3.2:3b"              → fully local, no key needed
+    #   "anthropic/claude-haiku-4-5"      → Anthropic API
+    #   "openai/gpt-4o"                   → OpenAI API
+    #   "vertex_ai/gemini-2.0-flash"      → Google Cloud Vertex AI
+    #   "github/gpt-4o"                   → GitHub Copilot API
+    # When set, this model becomes the primary in the fallback chain.
+    # LRD_CUSTOM_API_KEY and LRD_CUSTOM_API_BASE are optional companions.
+    custom_model: str | None = Field(
+        default=None,
+        description="Any litellm model string; slots in as highest-priority provider",
+        validation_alias=AliasChoices("LRD_CUSTOM_MODEL", "custom_model"),
+    )
+    custom_api_key: SecretStr | None = Field(
+        default=None,
+        description="API key for the custom model provider",
+        validation_alias=AliasChoices("LRD_CUSTOM_API_KEY", "custom_api_key"),
+    )
+    custom_api_base: str | None = Field(
+        default=None,
+        description="Base URL for the custom provider (auto-set for ollama/ models)",
+        validation_alias=AliasChoices("LRD_CUSTOM_API_BASE", "custom_api_base"),
+    )
+
     # ── Provider credentials (any one is enough; mock mode if none) ────────
     hf_token: SecretStr | None = Field(default=None, description="Hugging Face token")
     gemini_api_key: SecretStr | None = Field(default=None, description="Google AI Studio key")
@@ -120,6 +145,8 @@ class Settings(BaseSettings):
     @property
     def is_mock_mode(self) -> bool:
         """True when no real provider credentials are configured."""
+        if self.custom_model is not None:
+            return False
         return self.hf_token is None and self.gemini_api_key is None
 
     @property

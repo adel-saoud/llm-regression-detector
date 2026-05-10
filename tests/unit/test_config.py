@@ -20,7 +20,7 @@ def test_detect_platform(url: str, expected: WebhookPlatform) -> None:
 
 
 def test_settings_mock_mode_when_no_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    for var in ("HF_TOKEN", "GEMINI_API_KEY"):
+    for var in ("HF_TOKEN", "GEMINI_API_KEY", "LRD_CUSTOM_MODEL"):
         monkeypatch.delenv(var, raising=False)
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
     assert settings.is_mock_mode is True

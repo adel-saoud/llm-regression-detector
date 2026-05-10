@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pyright](https://img.shields.io/badge/types-pyright%20strict-1f5fff)](https://github.com/microsoft/pyright)
-[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](pyproject.toml)
+[![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ![Demo: baseline 88.7% → degraded 60.4% → CRITICAL regression detected](demo.gif)
@@ -71,19 +71,21 @@ A naive accuracy check breaks in three common ways. Here's how this project hand
 
 ## Provider fallback chain
 
-The project runs at **$0** by default, with a tiered fallback:
+The project runs at **$0** by default, with a tiered fallback. Set `LRD_CUSTOM_MODEL` to use any provider — or let the built-in free chain handle it:
 
 ```mermaid
 flowchart LR
-    R[litellm Router] --> HF[HF Inference Providers\nfree tier]
+    C[LRD_CUSTOM_MODEL\nany litellm provider] -->|highest priority| R[litellm Router]
+    R --> HF[HF Inference Providers\nfree tier]
     HF -. fallback .-> G[Gemini 2.0 Flash\nfree tier]
     G -. fallback .-> O[Ollama\nfully local]
     O -. no credentials .-> M[Deterministic mock\noffline · used in tests]
 
+    style C fill:#052e16,stroke:#166534,color:#86efac
     style M fill:#1e1b4b,stroke:#4338ca,color:#c7d2fe
 ```
 
-No credit card required anywhere in the default chain.
+`LRD_CUSTOM_MODEL` accepts any [litellm model string](https://docs.litellm.ai/docs/providers) — Anthropic, OpenAI, Vertex AI, GitHub Copilot, and 100+ others. `ollama/` models are auto-detected as local and need no API key. No credit card required anywhere in the default chain.
 
 <br>
 
@@ -126,7 +128,7 @@ uv run lrd run -p prompts/classifier_v1.yaml --report evals/report.html
 uv run lrd dashboard   # Streamlit UI at localhost:8501
 ```
 
-![Dashboard — accuracy timeline with 95% CI band, KPIs, and run comparison](docs/dashboard.png)
+![Dashboard — KPI cards, accuracy history with confidence band, and version comparison panel](docs/dashboard.png)
 
 <br>
 
@@ -141,12 +143,12 @@ src/llm_regression_detector/
 ├── notify/            Slack · Google Chat · Discord · generic — shared retry policy
 ├── storage/           SQLite run history — schema-versioned, forward-migrated
 ├── report/            HTML report (Jinja2) + GitHub PR comment
-├── dashboard/         Streamlit dashboard — timeline, CI bands, drift chart
+├── dashboard/         Streamlit dashboard — KPI cards, accuracy history, version comparison
 └── cli.py             lrd run · lrd diff · lrd report · lrd dashboard
 
 prompts/               Versioned prompt YAMLs — the "code" being tested
 golden_dataset/        53 hand-labelled cases across 4 categories
-tests/                 79 tests · 88% coverage · fully hermetic
+tests/                 78 tests · 89% coverage · fully hermetic
 .github/workflows/     ci.yml — lint, type, test · eval.yml — runs on prompt changes
 ```
 
@@ -199,7 +201,7 @@ uv run pre-commit install
 uv run ruff check --fix .    # lint + autofix
 uv run ruff format .         # format
 uv run pyright               # type-check — must stay at 0 errors
-uv run pytest                # 79 tests, 88% coverage, gate at 85%
+uv run pytest                # 78 tests, 89% coverage, gate at 85%
 ```
 
 <br>

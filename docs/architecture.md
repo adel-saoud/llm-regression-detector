@@ -32,6 +32,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     Call[runner.complete] --> Router[litellm Router]
+    Router -->|tier 0 — optional| Cust[LRD_CUSTOM_MODEL<br/>any litellm provider]
     Router -->|tier 1| HF[HF Inference Providers<br/>configurable model]
     Router -.->|fallback| Gem[Gemini 2.0 Flash<br/>free tier]
     Router -.->|fallback| Oll[Ollama<br/>local]
@@ -39,9 +40,19 @@ flowchart LR
 ```
 
 The Router tries providers in declared order and retries within each. Every
-model id is configurable via `Settings` (`LRD_HF_MODEL`, `LRD_GEMINI_MODEL`,
-`LRD_OLLAMA_MODEL`) — there are no hardcoded provider models. The full chain
-costs $0 — every default provider has a free tier or runs locally.
+model id is configurable via `Settings`:
+
+| Env var | Purpose |
+|---|---|
+| `LRD_CUSTOM_MODEL` | Any [litellm model string](https://docs.litellm.ai/docs/providers) — slots in as the highest-priority tier |
+| `LRD_CUSTOM_API_KEY` | API key for the custom provider |
+| `LRD_CUSTOM_API_BASE` | Base URL override (auto-set for `ollama/` models) |
+| `LRD_HF_MODEL` | Model for HF Inference Providers tier |
+| `LRD_GEMINI_MODEL` | Model for Gemini tier |
+| `LRD_OLLAMA_MODEL` | Model for Ollama tier |
+
+There are no hardcoded provider models anywhere in the codebase. The full default
+chain costs $0 — every built-in provider has a free tier or runs locally.
 
 ## Webhook delivery
 
@@ -74,14 +85,14 @@ collisions when multiple processes retry the same webhook.
 | `eval.parsing` | tolerant JSON extraction from model output | `extract_json_object` |
 | `eval.stats` | Wilson 95% CI · percentiles · slow-drift detection (pure, dependency-free) | `WilsonInterval`, `DriftSignal`, `wilson_interval`, `percentile`, `detect_slow_drift` |
 | `diff.analyzer` | CI-aware regression detection + severity logic | `Analyzer`, `DiffReport`, `Thresholds` |
-| `diff.drift` | slow-drift wrapper over `EvalRun` history | `DriftReport`, `analyse_drift` |
+| `diff.drift` | slow-drift wrapper over `EvalRun` history | `DriftReport`, `analyze_drift` |
 | `notify.base` | Notifier Protocol + shared payload model | `Notifier`, `AlertPayload`, `NullNotifier` |
 | `notify.transport` | shared HTTP retry/backoff/jitter policy | `post_with_retry` |
 | `notify.{slack,google_chat,discord,generic}` | per-platform format + delivery | `SlackNotifier` etc. |
 | `storage.sqlite` | run history + schema-versioned forward migration | `SQLiteStorage` |
 | `report.html` | Jinja2-driven HTML report renderer | `render_html`, `write_html` |
 | `report.pr_comment` | GitHub-flavoured markdown summary | `render_pr_comment` |
-| `dashboard.app` | Streamlit dashboard (timeline, CI band, drift, side-by-side) | — |
+| `dashboard.app` | Streamlit dashboard — two-column layout: accuracy history with CI band + version comparison panel (category breakdown, regression/improvement tabs) | — |
 | `cli` | typer entry point | `lrd run`, `lrd diff`, `lrd report`, `lrd dashboard` |
 
 ## Why these choices
@@ -94,4 +105,4 @@ collisions when multiple processes retry the same webhook.
 - **Pydantic v2 with `frozen=True, extra="forbid"`** — runtime validation doubles as documentation; serialisation for SQLite is `model_dump_json`. Strict-by-default.
 - **Schema-versioned SQLite** — `eval_runs` rows are tagged with `schema_version`; `_migrate_payload` forward-fills new fields with sensible defaults so old rows survive non-additive changes.
 - **Protocols over ABCs** for `Notifier` and `LLMClient` — duck-typed, no inheritance, trivial to test with `NullNotifier` / `MockLLMClient`.
-- **Mock provider in `llm.mock`** — the full pipeline runs offline with no keys, which is what makes the 79-test suite hermetic, the dev loop free, and the demo runnable in 3 seconds.
+- **Mock provider in `llm.mock`** — the full pipeline runs offline with no keys, which is what makes the 78-test suite hermetic, the dev loop free, and the demo runnable in 3 seconds.

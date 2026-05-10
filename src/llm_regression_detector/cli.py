@@ -16,7 +16,7 @@ from rich.table import Table
 
 from llm_regression_detector.config import Settings
 from llm_regression_detector.diff.analyzer import Analyzer, DiffReport, to_alert_payload
-from llm_regression_detector.diff.drift import DriftReport, analyse_drift
+from llm_regression_detector.diff.drift import DriftReport, analyze_drift
 from llm_regression_detector.eval.dataset import EvalRun, load_dataset, load_prompt
 from llm_regression_detector.eval.runner import Runner
 from llm_regression_detector.eval.scorer import Judge
@@ -161,7 +161,7 @@ async def _run_async(
     if drift_check:
         history = await storage.recent(prompt_spec.name, limit=8)
         # Exclude the candidate itself if it's already saved (it isn't yet).
-        drift_report = analyse_drift(history, candidate)
+        drift_report = analyze_drift(history, candidate)
         _print_drift(drift_report)
 
     if save:

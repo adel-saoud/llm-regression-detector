@@ -48,9 +48,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/adelsaoud/llm-regression-detector"
-Repository = "https://github.com/adelsaoud/llm-regression-detector"
-Issues = "https://github.com/adelsaoud/llm-regression-detector/issues"
+Homepage = "https://github.com/adel-saoud/llm-regression-detector"
+Repository = "https://github.com/adel-saoud/llm-regression-detector"
+Issues = "https://github.com/adel-saoud/llm-regression-detector/issues"
 
 [project.scripts]
 lrd = "llm_regression_detector.cli:app"
@@ -116,6 +116,8 @@ docstring-code-format = true
 # ── Pyright: strict type checking ───────────────────────────────────────────
 [tool.pyright]
 include = ["src", "tests"]
+# Streamlit/plotly/pandas lack type stubs — exclude the dashboard from strict checks
+exclude = ["src/llm_regression_detector/dashboard/app.py"]
 typeCheckingMode = "strict"
 pythonVersion = "3.11"
 reportMissingTypeStubs = "warning"

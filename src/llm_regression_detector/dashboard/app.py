@@ -114,14 +114,27 @@ col1.metric(
     delta=(
         f"{(latest['accuracy'] - prev['accuracy']) * 100:+.2f} pp" if prev is not None else None
     ),
-    help=f"95% Wilson CI {latest['ci_low'] * 100:.1f}–{latest['ci_high'] * 100:.1f}%",
+    help=f"95% Wilson CI {latest['ci_low'] * 100:.1f}–{latest['ci_high'] * 100:.1f}% · delta vs previous run",
 )
-col2.metric("Summary score", f"{latest['summary_score']:.2f} / 5")
-col3.metric("Latency p50/p95", f"{latest['p50_ms']:.0f} / {latest['p95_ms']:.0f} ms")
-col4.metric("Cases", f"{int(latest['passed'])}/{int(latest['total'])}")
+col2.metric(
+    "Judge score",
+    f"{latest['summary_score']:.2f} / 5",
+    help="Average LLM-as-Judge quality score across all cases (1 = wrong, 5 = perfect)",
+)
+col3.metric(
+    "Latency p50 / p95",
+    f"{latest['p50_ms']:.0f} / {latest['p95_ms']:.0f} ms",
+    help=f"p99 = {latest['p99_ms']:.0f} ms",
+)
+col4.metric(
+    "Passed",
+    f"{int(latest['passed'])} / {int(latest['total'])}",
+    help="Cases where the model's prediction matched the gold label",
+)
 col5.metric(
-    "Est. cost",
-    f"${latest['cost_usd']:.4f}" if latest["cost_usd"] > 0 else "—",
+    "Cost",
+    f"${latest['cost_usd']:.4f}" if latest["cost_usd"] > 0 else "$0",
+    help="Estimated cost based on token counts × $/M rates. $0 = free tier or mock provider.",
 )
 
 # ── Drift summary ───────────────────────────────────────────────────────────
@@ -196,10 +209,15 @@ st.plotly_chart(fig, width="stretch")
 with st.expander("Latency percentiles over time", expanded=False):
     fig_lat = px.line(
         df_sorted,
-        x="timestamp",
+        x="version",
         y=["p50_ms", "p95_ms", "p99_ms"],
         markers=True,
+        labels={"version": "Version", "value": "Latency (ms)", "variable": "Percentile"},
     )
+    fig_lat.for_each_trace(
+        lambda t: t.update(name=t.name.replace("p50_ms", "p50").replace("p95_ms", "p95").replace("p99_ms", "p99"))
+    )
+    fig_lat.update_xaxes(type="category")
     fig_lat.update_layout(height=280, margin={"l": 0, "r": 0, "t": 20, "b": 0})
     fig_lat.update_yaxes(title="ms")
     st.plotly_chart(fig_lat, width="stretch")
@@ -235,10 +253,10 @@ else:
             cats_df = pd.DataFrame(
                 [
                     {
-                        "category": cat,
-                        "baseline": base_cats.get(cat, 0.0),
-                        "candidate": cand_cats.get(cat, 0.0),
-                        "delta_pp": (cand_cats.get(cat, 0.0) - base_cats.get(cat, 0.0)) * 100,
+                        "Category": cat,
+                        "Baseline": base_cats.get(cat, 0.0),
+                        "Candidate": cand_cats.get(cat, 0.0),
+                        "Δ (pp)": (cand_cats.get(cat, 0.0) - base_cats.get(cat, 0.0)) * 100,
                     }
                     for cat in sorted(base_cats.keys() | cand_cats.keys())
                 ]
@@ -246,7 +264,7 @@ else:
             with st.expander("Per-category accuracy", expanded=True):
                 st.dataframe(
                     cats_df.style.format(
-                        {"baseline": "{:.1%}", "candidate": "{:.1%}", "delta_pp": "{:+.2f}"}
+                        {"Baseline": "{:.1%}", "Candidate": "{:.1%}", "Δ (pp)": "{:+.1f}"}
                     ),
                     width="stretch",
                 )
@@ -261,7 +279,17 @@ else:
         with tab_reg:
             if diff.regressions:
                 st.dataframe(
-                    pd.DataFrame([d.model_dump() for d in diff.regressions]),
+                    pd.DataFrame(
+                        [
+                            {
+                                "Case": d.case_id,
+                                "Baseline score": d.baseline_summary_score,
+                                "Candidate score": d.candidate_summary_score,
+                                "Δ score": d.candidate_summary_score - d.baseline_summary_score,
+                            }
+                            for d in diff.regressions
+                        ]
+                    ),
                     width="stretch",
                 )
             else:
@@ -269,7 +297,17 @@ else:
         with tab_imp:
             if diff.improvements:
                 st.dataframe(
-                    pd.DataFrame([d.model_dump() for d in diff.improvements]),
+                    pd.DataFrame(
+                        [
+                            {
+                                "Case": d.case_id,
+                                "Baseline score": d.baseline_summary_score,
+                                "Candidate score": d.candidate_summary_score,
+                                "Δ score": d.candidate_summary_score - d.baseline_summary_score,
+                            }
+                            for d in diff.improvements
+                        ]
+                    ),
                     width="stretch",
                 )
             else:
@@ -278,11 +316,11 @@ else:
             cand_df = pd.DataFrame(
                 [
                     {
-                        "case_id": r.case_id,
-                        "passed": r.passed,
-                        "predicted_category": r.predicted_category,
-                        "summary_score": r.judge.summary_score,
-                        "latency_ms": round(r.latency_ms, 1),
+                        "Case": r.case_id,
+                        "Passed": "✓" if r.passed else "✗",
+                        "Predicted category": r.predicted_category,
+                        "Judge score": r.judge.summary_score,
+                        "Latency (ms)": round(r.latency_ms, 1),
                     }
                     for r in candidate.results
                 ]

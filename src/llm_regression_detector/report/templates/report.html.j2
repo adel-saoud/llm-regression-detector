@@ -2,120 +2,276 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Eval report — {{ candidate.run_id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eval report — {{ candidate.prompt_name }}@{{ candidate.prompt_version }}</title>
   <style>
     :root {
       --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e;
       --card: #161b22; --border: #30363d;
       --green: #3fb950; --yellow: #d29922; --red: #f85149; --blue: #58a6ff;
+      --green-dim: rgba(63,185,80,.15); --yellow-dim: rgba(210,153,34,.15); --red-dim: rgba(248,81,73,.15);
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 32px; background: var(--bg); color: var(--fg);
-           font: 14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; }
-    h1, h2 { margin: 0 0 12px; }
-    h1 { font-size: 24px; }
-    h2 { font-size: 18px; margin-top: 32px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--fg);
+           font: 14px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+           padding: 40px 32px; max-width: 1100px; margin: 0 auto; }
+
+    /* ── Typography ── */
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    h2 { font-size: 15px; font-weight: 600; margin: 36px 0 12px; color: var(--muted);
+         text-transform: uppercase; letter-spacing: .06em; }
     .muted { color: var(--muted); }
+
+    /* ── Cards ── */
     .card { background: var(--card); border: 1px solid var(--border);
-            border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
-    .metric { text-align: left; }
-    .metric .value { font-size: 24px; font-weight: 600; }
-    .metric .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-    .metric .sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
-    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px;
-             font-size: 12px; font-weight: 600; }
-    .badge-info     { background: rgba(63, 185, 80, .15); color: var(--green); }
-    .badge-warning  { background: rgba(210, 153, 34, .15); color: var(--yellow); }
-    .badge-critical { background: rgba(248, 81, 73, .15); color: var(--red); }
-    .delta-positive { color: var(--green); }
-    .delta-negative { color: var(--red); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+            border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+
+    /* ── Severity banner ── */
+    .banner { border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;
+              display: flex; align-items: center; gap: 14px; }
+    .banner-ok       { background: var(--green-dim);  border: 1px solid rgba(63,185,80,.3); }
+    .banner-warning  { background: var(--yellow-dim); border: 1px solid rgba(210,153,34,.3); }
+    .banner-critical { background: var(--red-dim);    border: 1px solid rgba(248,81,73,.3); }
+    .banner-icon { font-size: 22px; }
+    .banner-title { font-size: 16px; font-weight: 700; }
+    .banner-ok       .banner-title { color: var(--green); }
+    .banner-warning  .banner-title { color: var(--yellow); }
+    .banner-critical .banner-title { color: var(--red); }
+    .banner-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Metric grid ── */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 8px; }
+    .metric .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    .metric .value { font-size: 26px; font-weight: 700; margin: 4px 0 2px; line-height: 1; }
+    .metric .sub   { color: var(--muted); font-size: 11px; }
+
+    /* ── CI comparison chart ── */
+    .ci-chart { margin: 20px 0 4px; }
+    .ci-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 12px; }
+    .ci-label { width: 72px; color: var(--muted); text-align: right; flex-shrink: 0; }
+    .ci-track { flex: 1; height: 10px; background: var(--border); border-radius: 999px; position: relative; }
+    .ci-range { position: absolute; height: 100%; border-radius: 999px; }
+    .ci-point { position: absolute; width: 3px; height: 16px; top: -3px; border-radius: 2px; }
+    .ci-baseline .ci-range { background: rgba(88,166,255,.25); }
+    .ci-baseline .ci-point { background: var(--blue); }
+    .ci-candidate .ci-range { background: rgba(63,185,80,.25); }
+    .ci-candidate .ci-point { background: var(--green); }
+    .ci-candidate-warn .ci-range { background: rgba(210,153,34,.25); }
+    .ci-candidate-warn .ci-point { background: var(--yellow); }
+    .ci-candidate-crit .ci-range { background: rgba(248,81,73,.25); }
+    .ci-candidate-crit .ci-point { background: var(--red); }
+    .ci-val { width: 52px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase;
+         letter-spacing: .05em; padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:last-child td { border-bottom: 0; }
-    code { background: rgba(110, 118, 129, .2); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-    .pill-pass { color: var(--green); }
-    .pill-fail { color: var(--red); }
     .num-right { text-align: right; }
-    a { color: var(--blue); }
+
+    /* ── Accuracy bar (per-category) ── */
+    .acc-cell { display: flex; align-items: center; gap: 10px; }
+    .acc-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 999px; max-width: 120px; }
+    .acc-bar-fill { height: 100%; border-radius: 999px; }
+    .acc-high { background: var(--green); }
+    .acc-mid  { background: var(--yellow); }
+    .acc-low  { background: var(--red); }
+    .acc-num  { font-weight: 600; font-size: 13px; width: 42px; }
+
+    /* ── Pass / fail pills ── */
+    .pass { color: var(--green); font-weight: 600; }
+    .fail { color: var(--red);   font-weight: 600; }
+
+    /* ── Delta ── */
+    .delta-pos { color: var(--green); }
+    .delta-neg { color: var(--red); }
+
+    code { background: rgba(110,118,129,.2); padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: ui-monospace, monospace; }
+
+    footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border);
+             color: var(--muted); font-size: 12px; }
+    footer a { color: var(--blue); text-decoration: none; }
   </style>
 </head>
 <body>
-  <h1>Eval report</h1>
-  <p class="muted">
-    Candidate <code>{{ candidate.run_id }}</code>
-    {% if baseline %} vs baseline <code>{{ baseline.run_id }}</code>{% endif %}
+
+  {# ── Header ── #}
+  <h1>Eval report · {{ candidate.prompt_name }}</h1>
+  <p class="muted" style="margin-top:6px; font-size:13px;">
+    <code>{{ candidate.prompt_version }}</code>
+    · run <code>{{ candidate.run_id }}</code>
     · {{ candidate.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}
+    {% if baseline %} · baseline <code>{{ baseline.prompt_version }}</code>{% endif %}
   </p>
 
+  {# ── Severity banner ── #}
   {% if diff %}
-  <div class="card">
-    <span class="badge badge-{{ diff.severity.value }}">{{ diff.severity.value | upper }}</span>
-    <span style="margin-left: 8px;">
-      Accuracy
-      <strong class="{% if diff.accuracy_delta >= 0 %}delta-positive{% else %}delta-negative{% endif %}">
-        {{ '%+.2f' % (diff.accuracy_delta * 100) }} pp
-      </strong>
-      vs baseline ·
-      <span class="muted">
-        {% if diff.is_significant %}
-          95% CIs do not overlap — change is statistically significant
-        {% else %}
-          95% CIs overlap — change may be within noise
-        {% endif %}
-      </span>
-    </span>
-  </div>
+    {% set sev = diff.severity.value %}
+    {% if sev == 'ok' %}
+      {% set icon = '✅' %}{% set cls = 'banner-ok' %}{% set label = 'OK — no regression detected' %}
+    {% elif sev == 'warning' %}
+      {% set icon = '⚠️' %}{% set cls = 'banner-warning' %}{% set label = 'WARNING — possible regression' %}
+    {% else %}
+      {% set icon = '🚨' %}{% set cls = 'banner-critical' %}{% set label = 'CRITICAL — regression detected' %}
+    {% endif %}
+    <div class="banner {{ cls }}" style="margin-top:24px;">
+      <span class="banner-icon">{{ icon }}</span>
+      <div>
+        <div class="banner-title">{{ label }}</div>
+        <div class="banner-sub">
+          Accuracy {{ '%+.2f' % (diff.accuracy_delta * 100) }} pp vs baseline ·
+          {% if diff.is_significant %}
+            95% CIs do not overlap — statistically significant
+          {% else %}
+            95% CIs overlap — change may be within noise
+          {% endif %}
+          · {{ diff.regressions | length }} regression{{ 's' if diff.regressions | length != 1 }} ·
+          {{ diff.improvements | length }} improvement{{ 's' if diff.improvements | length != 1 }}
+        </div>
+      </div>
+    </div>
   {% endif %}
 
-  <div class="grid-5">
-    <div class="card metric">
-      <div class="label">Accuracy</div>
-      <div class="value">{{ '%.1f' % (candidate.summary.accuracy * 100) }}%</div>
-      <div class="sub">95% CI {{ '%.1f' % (candidate.summary.accuracy_ci_low * 100) }}–{{ '%.1f' % (candidate.summary.accuracy_ci_high * 100) }}%</div>
-    </div>
-    <div class="card metric">
-      <div class="label">Summary score</div>
-      <div class="value">{{ '%.2f' % candidate.summary.avg_summary_score }}<span class="sub" style="font-size:14px;"> / 5</span></div>
-    </div>
-    <div class="card metric">
-      <div class="label">Latency p50 / p95</div>
-      <div class="value">{{ '%.0f' % candidate.summary.latency_p50_ms }} / {{ '%.0f' % candidate.summary.latency_p95_ms }}<span class="sub" style="font-size:14px;"> ms</span></div>
-      <div class="sub">p99 {{ '%.0f' % candidate.summary.latency_p99_ms }} ms</div>
-    </div>
-    <div class="card metric">
-      <div class="label">Tokens (in / out)</div>
-      <div class="value" style="font-size:18px;">
-        {{ candidate.summary.total_prompt_tokens }} / {{ candidate.summary.total_completion_tokens }}
+  {# ── Key metrics ── #}
+  <h2>Key metrics</h2>
+  <div class="card">
+    <div class="metrics">
+      <div class="metric">
+        <div class="label">Accuracy</div>
+        <div class="value">{{ '%.1f' % (candidate.summary.accuracy * 100) }}%</div>
+        <div class="sub">95% CI {{ '%.1f' % (candidate.summary.accuracy_ci_low * 100) }}–{{ '%.1f' % (candidate.summary.accuracy_ci_high * 100) }}%</div>
+      </div>
+      <div class="metric">
+        <div class="label">Cases</div>
+        <div class="value">{{ candidate.summary.cases_passed }}<span style="font-size:16px;font-weight:400;color:var(--muted);">/{{ candidate.summary.cases_total }}</span></div>
+        <div class="sub">passed</div>
+      </div>
+      <div class="metric">
+        <div class="label">Summary score</div>
+        <div class="value">{{ '%.2f' % candidate.summary.avg_summary_score }}<span style="font-size:14px;font-weight:400;color:var(--muted);"> /5</span></div>
+        <div class="sub">avg judge score</div>
+      </div>
+      <div class="metric">
+        <div class="label">Latency p50 / p95</div>
+        <div class="value" style="font-size:20px;">{{ '%.0f' % candidate.summary.latency_p50_ms }}<span style="font-size:13px;color:var(--muted);"> / {{ '%.0f' % candidate.summary.latency_p95_ms }} ms</span></div>
+        <div class="sub">p99 {{ '%.0f' % candidate.summary.latency_p99_ms }} ms</div>
+      </div>
+      <div class="metric">
+        <div class="label">Tokens (in / out)</div>
+        <div class="value" style="font-size:20px;">{{ candidate.summary.total_prompt_tokens }}<span style="font-size:13px;color:var(--muted);"> / {{ candidate.summary.total_completion_tokens }}</span></div>
+        <div class="sub">total tokens</div>
+      </div>
+      <div class="metric">
+        <div class="label">Estimated cost</div>
+        <div class="value" style="font-size:20px;">
+          {% if candidate.summary.estimated_cost_usd > 0 %}
+            ${{ '%.4f' % candidate.summary.estimated_cost_usd }}
+          {% else %}
+            <span style="color:var(--green);">$0</span>
+          {% endif %}
+        </div>
+        <div class="sub">
+          {% if candidate.summary.estimated_cost_usd == 0 %}free tier / mock{% endif %}
+        </div>
       </div>
     </div>
-    <div class="card metric">
-      <div class="label">Estimated cost</div>
-      <div class="value">
-        {% if candidate.summary.estimated_cost_usd > 0 %}
-          ${{ '%.4f' % candidate.summary.estimated_cost_usd }}
-        {% else %}
-          <span class="muted">$0 (free tier)</span>
-        {% endif %}
+
+    {# ── CI band comparison ── #}
+    {% if baseline %}
+      {% set b_lo = baseline.summary.accuracy_ci_low %}
+      {% set b_hi = baseline.summary.accuracy_ci_high %}
+      {% set b_pt = baseline.summary.accuracy %}
+      {% set c_lo = candidate.summary.accuracy_ci_low %}
+      {% set c_hi = candidate.summary.accuracy_ci_high %}
+      {% set c_pt = candidate.summary.accuracy %}
+      {% set sev = diff.severity.value if diff else 'ok' %}
+
+      <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:12px;">Wilson 95% confidence interval comparison</div>
+        <div class="ci-chart">
+          {# Baseline row #}
+          <div class="ci-row ci-baseline">
+            <div class="ci-label">Baseline</div>
+            <div class="ci-track">
+              <div class="ci-range" style="left:{{ '%.1f' % (b_lo * 100) }}%; width:{{ '%.1f' % ((b_hi - b_lo) * 100) }}%;"></div>
+              <div class="ci-point" style="left:calc({{ '%.1f' % (b_pt * 100) }}% - 1.5px);"></div>
+            </div>
+            <div class="ci-val" style="color:var(--blue);">{{ '%.1f' % (b_pt * 100) }}%</div>
+          </div>
+          {# Candidate row #}
+          {% if sev == 'ok' %}{% set cand_cls = 'ci-candidate' %}
+          {% elif sev == 'warning' %}{% set cand_cls = 'ci-candidate-warn' %}
+          {% else %}{% set cand_cls = 'ci-candidate-crit' %}{% endif %}
+          <div class="ci-row {{ cand_cls }}">
+            <div class="ci-label">Candidate</div>
+            <div class="ci-track">
+              <div class="ci-range" style="left:{{ '%.1f' % (c_lo * 100) }}%; width:{{ '%.1f' % ((c_hi - c_lo) * 100) }}%;"></div>
+              <div class="ci-point" style="left:calc({{ '%.1f' % (c_pt * 100) }}% - 1.5px);"></div>
+            </div>
+            <div class="ci-val"
+              {% if sev == 'ok' %}style="color:var(--green);"
+              {% elif sev == 'warning' %}style="color:var(--yellow);"
+              {% else %}style="color:var(--red);"{% endif %}>
+              {{ '%.1f' % (c_pt * 100) }}%
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--muted);">
+          Bar = 95% CI range · Marker = point estimate
+          {% if diff and not diff.is_significant %} · <span style="color:var(--yellow);">CIs overlap — treat as noise</span>{% endif %}
+        </div>
       </div>
-    </div>
+    {% endif %}
   </div>
 
+  {# ── Per-category accuracy ── #}
   {% if candidate.summary.per_category %}
   <h2>Per-category accuracy</h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>Category</th><th class="num-right">Accuracy</th><th class="num-right">Passed / Total</th></tr>
+        <tr>
+          <th>Category</th>
+          <th>Accuracy</th>
+          <th class="num-right">Passed / Total</th>
+          {% if diff %}<th class="num-right">vs baseline</th>{% endif %}
+        </tr>
       </thead>
       <tbody>
         {% for cat in candidate.summary.per_category %}
+          {% set pct = cat.accuracy * 100 %}
+          {% if pct >= 80 %}{% set bar_cls = 'acc-high' %}
+          {% elif pct >= 60 %}{% set bar_cls = 'acc-mid' %}
+          {% else %}{% set bar_cls = 'acc-low' %}{% endif %}
         <tr>
           <td><code>{{ cat.category }}</code></td>
-          <td class="num-right">{{ '%.1f' % (cat.accuracy * 100) }}%</td>
-          <td class="num-right">{{ cat.cases_passed }}/{{ cat.cases_total }}</td>
+          <td>
+            <div class="acc-cell">
+              <div class="acc-num
+                {% if pct >= 80 %}delta-pos{% elif pct < 60 %}delta-neg{% endif %}">
+                {{ '%.0f' % pct }}%
+              </div>
+              <div class="acc-bar-track">
+                <div class="acc-bar-fill {{ bar_cls }}" style="width:{{ '%.1f' % pct }}%;"></div>
+              </div>
+            </div>
+          </td>
+          <td class="num-right muted">{{ cat.cases_passed }}/{{ cat.cases_total }}</td>
+          {% if diff %}
+            {# find baseline category match #}
+            {% set b_cat = baseline.summary.per_category | selectattr('category', 'eq', cat.category) | first | default(none) %}
+            <td class="num-right">
+              {% if b_cat %}
+                {% set delta = (cat.accuracy - b_cat.accuracy) * 100 %}
+                <span class="{% if delta >= 0 %}delta-pos{% else %}delta-neg{% endif %}">
+                  {{ '%+.1f' % delta }} pp
+                </span>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -123,20 +279,21 @@
   </div>
   {% endif %}
 
+  {# ── Regressions ── #}
   {% if diff and diff.regressions %}
   <h2>Regressions ({{ diff.regressions | length }})</h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th>Δ summary</th></tr>
+        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th class="num-right">Δ score</th></tr>
       </thead>
       <tbody>
         {% for r in diff.regressions %}
         <tr>
           <td><code>{{ r.case_id }}</code></td>
-          <td class="pill-pass">PASS ({{ r.baseline_summary_score }})</td>
-          <td class="pill-fail">FAIL ({{ r.candidate_summary_score }})</td>
-          <td>{{ '%+d' % (r.candidate_summary_score - r.baseline_summary_score) }}</td>
+          <td class="pass">PASS ({{ r.baseline_summary_score }}/5)</td>
+          <td class="fail">FAIL ({{ r.candidate_summary_score }}/5)</td>
+          <td class="num-right delta-neg">{{ '%+d' % (r.candidate_summary_score - r.baseline_summary_score) }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -144,20 +301,21 @@
   </div>
   {% endif %}
 
+  {# ── Improvements ── #}
   {% if diff and diff.improvements %}
   <h2>Improvements ({{ diff.improvements | length }})</h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th>Δ summary</th></tr>
+        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th class="num-right">Δ score</th></tr>
       </thead>
       <tbody>
         {% for i in diff.improvements %}
         <tr>
           <td><code>{{ i.case_id }}</code></td>
-          <td class="pill-fail">FAIL ({{ i.baseline_summary_score }})</td>
-          <td class="pill-pass">PASS ({{ i.candidate_summary_score }})</td>
-          <td>{{ '%+d' % (i.candidate_summary_score - i.baseline_summary_score) }}</td>
+          <td class="fail">FAIL ({{ i.baseline_summary_score }}/5)</td>
+          <td class="pass">PASS ({{ i.candidate_summary_score }}/5)</td>
+          <td class="num-right delta-pos">{{ '%+d' % (i.candidate_summary_score - i.baseline_summary_score) }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -165,31 +323,46 @@
   </div>
   {% endif %}
 
-  <h2>All cases</h2>
+  {# ── All cases ── #}
+  <h2>All cases ({{ candidate.results | length }})</h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>Case</th><th>Predicted</th><th>Status</th><th>Score</th><th>Latency</th></tr>
+        <tr>
+          <th>Case</th>
+          <th>Predicted</th>
+          <th>Status</th>
+          <th class="num-right">Score</th>
+          <th class="num-right">Latency</th>
+        </tr>
       </thead>
       <tbody>
         {% for c in candidate.results %}
         <tr>
           <td><code>{{ c.case_id }}</code></td>
-          <td><code>{{ c.predicted_category }}</code> — {{ c.predicted_summary | truncate(60) }}</td>
-          <td class="{% if c.passed %}pill-pass{% else %}pill-fail{% endif %}">
+          <td>
+            <code>{{ c.predicted_category }}</code>
+            <span class="muted"> — {{ c.predicted_summary | truncate(55) }}</span>
+          </td>
+          <td class="{% if c.passed %}pass{% else %}fail{% endif %}">
             {{ 'PASS' if c.passed else 'FAIL' }}
           </td>
-          <td>{{ c.judge.summary_score }}/5</td>
-          <td>{{ '%.0f' % c.latency_ms }} ms</td>
+          <td class="num-right">
+            <span class="{% if c.judge.summary_score >= 4 %}pass{% elif c.judge.summary_score <= 2 %}fail{% else %}muted{% endif %}">
+              {{ c.judge.summary_score }}/5
+            </span>
+          </td>
+          <td class="num-right muted">{{ '%.0f' % c.latency_ms }} ms</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <p class="muted" style="margin-top: 32px;">
-    Generated by
-    <a href="https://github.com/adelsaoud/llm-regression-detector">llm-regression-detector</a>.
-  </p>
+  <footer>
+    Generated by <a href="https://github.com/adel-saoud/llm-regression-detector">llm-regression-detector</a>
+    · {{ candidate.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}
+  </footer>
+
 </body>
 </html>

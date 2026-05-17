@@ -13,10 +13,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Category(StrEnum):
-    BILLING = "billing"
-    TECHNICAL = "technical"
-    ACCOUNT = "account"
-    GENERAL = "general"
+    P0 = "p0"
+    P1 = "p1"
+    P2 = "p2"
+    P3 = "p3"
 
 
 class Difficulty(StrEnum):

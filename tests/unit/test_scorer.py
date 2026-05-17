@@ -32,10 +32,10 @@ def test_parse_judge_response_falls_back_on_invalid_json() -> None:
     case = GoldenCase(
         id="x",
         input_email="e",
-        expected_category=Category.BILLING,
+        expected_category=Category.P2,
         expected_summary_keywords=["k"],
         difficulty=Difficulty.EASY,
     )
-    score = _parse_judge_response("not json at all", "billing", case)
+    score = _parse_judge_response("not json at all", "p2", case)
     assert score.category_match is True  # predicted matches expected
     assert score.summary_score == 1  # safe default

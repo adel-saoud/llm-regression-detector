@@ -89,11 +89,11 @@ collisions when multiple processes retry the same webhook.
 | `notify.base` | Notifier Protocol + shared payload model | `Notifier`, `AlertPayload`, `NullNotifier` |
 | `notify.transport` | shared HTTP retry/backoff/jitter policy | `post_with_retry` |
 | `notify.{slack,google_chat,discord,generic}` | per-platform format + delivery | `SlackNotifier` etc. |
-| `storage.sqlite` | run history + schema-versioned forward migration | `SQLiteStorage` |
+| `storage.sqlite` | run history + schema-versioned forward migration; `recent_any` for cross-prompt lookup | `SQLiteStorage` |
 | `report.html` | Jinja2-driven HTML report renderer | `render_html`, `write_html` |
 | `report.pr_comment` | GitHub-flavoured markdown summary | `render_pr_comment` |
 | `dashboard.app` | Streamlit dashboard — two-column layout: accuracy history with CI band + version comparison panel (category breakdown, regression/improvement tabs) | — |
-| `cli` | typer entry point | `lrd run`, `lrd diff`, `lrd report`, `lrd dashboard` |
+| `cli` | typer entry point | `lrd run`, `lrd diff`, `lrd report`, `lrd pr-comment`, `lrd dashboard` |
 
 ## Why these choices
 

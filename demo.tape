@@ -21,7 +21,7 @@ Set Framerate 30
 
 # ── Setup (hidden): force mock mode + clean state ─────────────────────────
 Hide
-Type "setopt interactive_comments; rm -f evals/runs.db; mv .env .env.demo.bak 2>/dev/null || true; clear"
+Type "setopt interactive_comments; rm -f evals/runs.db; sed -i '' 's/^LRD_CUSTOM_MODEL=/#LRD_CUSTOM_MODEL=/' .env; clear"
 Enter
 Sleep 500ms
 Show
@@ -33,26 +33,26 @@ Enter
 Enter
 
 # ── Step 1: baseline ──────────────────────────────────────────────────────
-Type "# 1. Baseline: prompt v1 with few-shot examples"
+Type "# 1. Baseline: incident triage v1 (with few-shot examples)"
 Sleep 800ms
 Enter
-Type@40ms "uv run lrd run -p prompts/classifier_v1.yaml --no-diff --no-notify"
+Type@40ms "uv run lrd run -p prompts/incident_triage_v1.yaml --no-diff --no-notify"
 Enter
-Sleep 4500ms
+Sleep 7s
 
 # ── Step 2: degraded candidate ────────────────────────────────────────────
 Enter
-Type "# 2. Candidate: v2 — few-shots removed (deliberately degraded)"
+Type "# 2. Candidate: v2-degraded — vague prompt, no few-shots"
 Sleep 1.5s
 Enter
-Type@40ms "uv run lrd run -p prompts/classifier_v2_degraded.yaml --no-notify"
+Type@40ms "uv run lrd run -p prompts/incident_triage_v2_degraded.yaml --no-notify"
 Enter
-Sleep 5500ms
+Sleep 8s
 
 # Hold on the CRITICAL output so viewers can read it
-Sleep 3s
+Sleep 4s
 
 # ── Cleanup (hidden) ──────────────────────────────────────────────────────
 Hide
-Type "mv .env.demo.bak .env 2>/dev/null || true"
+Type "sed -i '' 's/^#LRD_CUSTOM_MODEL=/LRD_CUSTOM_MODEL=/' .env"
 Enter

@@ -57,7 +57,7 @@ def run(
     dataset: Annotated[
         Path,
         typer.Option("--dataset", "-d", help="Path to golden dataset JSON."),
-    ] = Path("golden_dataset/support_emails.json"),
+    ] = Path("golden_dataset/incidents.json"),
     db: Annotated[Path, typer.Option(help="SQLite path for run history.")] = Path("evals/runs.db"),
     save: Annotated[bool, typer.Option(help="Persist this run to the database.")] = True,
     report: Annotated[
@@ -238,6 +238,176 @@ async def _report_async(run_id: str, output: Path, pr_comment: bool, db: Path) -
     if pr_comment:
         console.print("\n--- PR comment markdown ---\n")
         console.print(render_pr_comment(candidate, diff))
+
+
+# ── `lrd pr-comment` ─────────────────────────────────────────────────────
+
+
+@app.command("pr-comment")
+def pr_comment_cmd(
+    prompt_name: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt-name",
+            "-n",
+            help="Prompt name to look up. Defaults to the most recent run.",
+        ),
+    ] = None,
+    db: Annotated[Path, typer.Option(help="SQLite path.")] = Path("evals/runs.db"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write markdown to this file instead of stdout."),
+    ] = None,
+) -> None:
+    """Render a GitHub PR comment for the latest run (and its baseline).
+
+    Reads the two most recent runs for the given prompt from the database and
+    renders a diff summary as GitHub-flavoured markdown.  Designed to be called
+    from CI after ``lrd run`` so no run-id bookkeeping is needed.
+    """
+    asyncio.run(_pr_comment_async(prompt_name=prompt_name, db_path=db, output_path=output))
+
+
+async def _pr_comment_async(
+    *,
+    prompt_name: str | None,
+    db_path: Path,
+    output_path: Path | None,
+) -> None:
+    storage = SQLiteStorage(db_path)
+    await storage.initialize()
+
+    if prompt_name is not None:
+        runs = await storage.recent(prompt_name, limit=2)
+    else:
+        # No prompt name — grab the two most recent runs across all prompts.
+        runs = await storage.recent_any(limit=2)
+
+    if not runs:
+        console.print("[yellow]No runs found in database.[/yellow]")
+        raise typer.Exit(code=1)
+
+    candidate = runs[0]
+    baseline = runs[1] if len(runs) > 1 else None
+    diff = Analyzer().diff(baseline, candidate) if baseline is not None else None
+    markdown = render_pr_comment(candidate, diff)
+
+    if output_path is not None:
+        output_path.write_text(markdown)
+        console.print(f"[green]✓[/green] wrote PR comment → {output_path}")
+    else:
+        print(markdown)
+
+
+# ── `lrd init` ───────────────────────────────────────────────────────────
+
+
+@app.command("init")
+def init_cmd(
+    name: Annotated[
+        str,
+        typer.Option(
+            "--name",
+            "-n",
+            prompt="Task name (slug, e.g. customer-support)",
+            help="Slug used for file names and the prompt name.",
+        ),
+    ],
+    categories: Annotated[
+        str,
+        typer.Option(
+            "--categories",
+            "-c",
+            prompt="Output categories (comma-separated, e.g. billing,technical,account,general)",
+            help="Comma-separated list of valid output categories.",
+        ),
+    ],
+    description: Annotated[
+        str,
+        typer.Option(
+            "--description",
+            prompt="One-line description of what your LLM does (e.g. Classifies customer emails)",
+            help="Used in the generated YAML description field.",
+        ),
+    ],
+    prompts_dir: Annotated[
+        Path, typer.Option("--prompts-dir", help="Directory for prompt YAMLs.")
+    ] = Path("prompts"),
+    dataset_dir: Annotated[
+        Path, typer.Option("--dataset-dir", help="Directory for golden dataset JSON.")
+    ] = Path("golden_dataset"),
+) -> None:
+    """Scaffold a prompt YAML and golden dataset template for a new LLM task."""
+    import json as _json
+
+    cats = [c.strip() for c in categories.split(",") if c.strip()]
+    if not cats:
+        console.print("[red]No categories provided.[/red]")
+        raise typer.Exit(code=1)
+
+    # Generate prompt YAML
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+    prompt_path = prompts_dir / f"{name}_v1.yaml"
+    cats_quoted = ", ".join(f'"{c}"' for c in cats)
+    few_shot_lines: list[str] = []
+    for cat in cats[:3]:
+        summary = "One-sentence summary of the input."
+        few_shot_lines.append(
+            f'  - input: "Example input for category {cat}"\n'
+            f'    output: \'{{"category": "{cat}", "summary": "{summary}"}}\''
+        )
+    few_shots_yaml = "\n".join(few_shot_lines)
+    prompt_yaml = f"""name: {name}
+version: v1
+description: |
+  {description} — v1 baseline.
+
+system: |
+  {description}.
+
+  For each input, output a JSON object with exactly two fields:
+    - "category": one of {cats_quoted}
+    - "summary":  a single-sentence description of the input
+
+  Be precise. Do not include any prose outside the JSON.
+
+few_shots:
+{few_shots_yaml}
+
+user_template: |
+  {{email}}
+
+  Output JSON only.
+"""
+    prompt_path.write_text(prompt_yaml)
+    console.print(f"[green]✓[/green] wrote prompt  → {prompt_path}")
+
+    # Generate golden dataset template
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    dataset_path = dataset_dir / f"{name}.json"
+    cases: list[dict[str, str]] = []
+    for i, cat in enumerate(cats[: min(len(cats), 5)]):
+        index_str = str(i + 1).zfill(3)
+        cases.append(
+            {
+                "id": f"{cat[0]}{index_str}",
+                "topic": f"Example {cat} case {i + 1}",
+                "input_email": f"Replace this with a real example input for the '{cat}' category.",
+                "expected_category": cat,
+            }
+        )
+    dataset_path.write_text(_json.dumps(cases, indent=2) + "\n")
+    console.print(f"[green]✓[/green] wrote dataset → {dataset_path}")
+
+    console.print()
+    console.print("[bold]Next steps:[/bold]")
+    console.print(f"  1. Edit {dataset_path} — replace the placeholder cases with real examples")
+    console.print("     (aim for 30–50 labelled cases; see docs/golden-dataset-guide.md)")
+    console.print(f"  2. Edit {prompt_path} — refine the system prompt and few-shot examples")
+    console.print("  3. Run your first baseline:")
+    console.print(f"     [bold]uv run lrd run -p {prompt_path} --no-diff[/bold]")
+    console.print("  4. Open the dashboard:")
+    console.print("     [bold]uv run lrd dashboard[/bold]")
 
 
 # ── `lrd dashboard` ──────────────────────────────────────────────────────

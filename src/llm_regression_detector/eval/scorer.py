@@ -130,7 +130,7 @@ def _build_messages(
             "role": "user",
             "content": _USER_TEMPLATE.format(
                 email=case.input_email,
-                expected_category=case.expected_category.value,
+                expected_category=case.expected_category,
                 expected_keywords=", ".join(case.expected_summary_keywords) or "(none)",
                 predicted_category=predicted_category,
                 predicted_summary=predicted_summary,
@@ -149,7 +149,7 @@ def _parse_judge_response(
     payload = extract_json_object(raw)
     if payload is None:
         return JudgeScore(
-            category_match=predicted_category == case.expected_category.value,
+            category_match=predicted_category == case.expected_category,
             summary_score=1,
             rationale="Judge output was not valid JSON; defaulted to score=1.",
         )

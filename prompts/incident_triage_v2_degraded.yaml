@@ -1,0 +1,16 @@
+name: incident-triage
+version: v2-degraded
+description: |
+  Degraded prompt — severity definitions are vague and conflated to simulate
+  a regression. Used for the demo: run v1 as baseline then v2 to see CRITICAL.
+
+system: |
+  You are an incident classifier. Classify incidents as p0, p1, p2, or p3.
+  Use your best judgment. Output JSON with "category" and "summary".
+
+few_shots: []
+
+user_template: |
+  Incident report: {email}
+
+  Output JSON only.

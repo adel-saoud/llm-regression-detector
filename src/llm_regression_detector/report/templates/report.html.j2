@@ -281,18 +281,24 @@
 
   {# ── Regressions ── #}
   {% if diff and diff.regressions %}
-  <h2>Regressions ({{ diff.regressions | length }})</h2>
+  <h2>Got worse ({{ diff.regressions | length }})</h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th class="num-right">Δ score</th></tr>
+        <tr>
+          <th>Topic</th>
+          <th class="num-right">Before (1–5)</th>
+          <th class="num-right">After (1–5)</th>
+          <th class="num-right">Change</th>
+        </tr>
       </thead>
       <tbody>
         {% for r in diff.regressions %}
+        {% set topic = candidate.results | selectattr('case_id', 'eq', r.case_id) | map(attribute='topic') | first | default(r.case_id) %}
         <tr>
-          <td><code>{{ r.case_id }}</code></td>
-          <td class="pass">PASS ({{ r.baseline_summary_score }}/5)</td>
-          <td class="fail">FAIL ({{ r.candidate_summary_score }}/5)</td>
+          <td>{{ topic or r.case_id }}</td>
+          <td class="num-right pass">{{ r.baseline_summary_score }}</td>
+          <td class="num-right fail">{{ r.candidate_summary_score }}</td>
           <td class="num-right delta-neg">{{ '%+d' % (r.candidate_summary_score - r.baseline_summary_score) }}</td>
         </tr>
         {% endfor %}
@@ -303,18 +309,24 @@
 
   {# ── Improvements ── #}
   {% if diff and diff.improvements %}
-  <h2>Improvements ({{ diff.improvements | length }})</h2>
+  <h2>Got better ({{ diff.improvements | length }})</h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>Case</th><th>Baseline</th><th>Candidate</th><th class="num-right">Δ score</th></tr>
+        <tr>
+          <th>Topic</th>
+          <th class="num-right">Before (1–5)</th>
+          <th class="num-right">After (1–5)</th>
+          <th class="num-right">Change</th>
+        </tr>
       </thead>
       <tbody>
         {% for i in diff.improvements %}
+        {% set topic = candidate.results | selectattr('case_id', 'eq', i.case_id) | map(attribute='topic') | first | default(i.case_id) %}
         <tr>
-          <td><code>{{ i.case_id }}</code></td>
-          <td class="fail">FAIL ({{ i.baseline_summary_score }}/5)</td>
-          <td class="pass">PASS ({{ i.candidate_summary_score }}/5)</td>
+          <td>{{ topic or i.case_id }}</td>
+          <td class="num-right fail">{{ i.baseline_summary_score }}</td>
+          <td class="num-right pass">{{ i.candidate_summary_score }}</td>
           <td class="num-right delta-pos">{{ '%+d' % (i.candidate_summary_score - i.baseline_summary_score) }}</td>
         </tr>
         {% endfor %}
@@ -329,23 +341,20 @@
     <table>
       <thead>
         <tr>
-          <th>Case</th>
-          <th>Predicted</th>
-          <th>Status</th>
-          <th class="num-right">Score</th>
+          <th>Topic</th>
+          <th>AI prediction</th>
+          <th>Result</th>
+          <th class="num-right">Score (1–5)</th>
           <th class="num-right">Latency</th>
         </tr>
       </thead>
       <tbody>
         {% for c in candidate.results %}
         <tr>
-          <td><code>{{ c.case_id }}</code></td>
-          <td>
-            <code>{{ c.predicted_category }}</code>
-            <span class="muted"> — {{ c.predicted_summary | truncate(55) }}</span>
-          </td>
+          <td>{{ c.topic or c.case_id }}</td>
+          <td><code>{{ c.predicted_category }}</code></td>
           <td class="{% if c.passed %}pass{% else %}fail{% endif %}">
-            {{ 'PASS' if c.passed else 'FAIL' }}
+            {{ '✓ Pass' if c.passed else '✗ Fail' }}
           </td>
           <td class="num-right">
             <span class="{% if c.judge.summary_score >= 4 %}pass{% elif c.judge.summary_score <= 2 %}fail{% else %}muted{% endif %}">

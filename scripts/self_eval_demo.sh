@@ -16,11 +16,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DB="evals/runs.db"
-DATASET="golden_dataset/support_emails.json"
+DATASET="golden_dataset/incidents.json"
 
 echo "▶ Step 1: baseline (v1, few-shots intact)"
 uv run lrd run \
-    --prompt prompts/classifier_v1.yaml \
+    --prompt prompts/incident_triage_v1.yaml \
     --dataset "$DATASET" \
     --db "$DB" \
     --report evals/report_v1.html \
@@ -33,7 +33,7 @@ echo "▶ Step 2: candidate (v2, deliberately degraded)"
 # at the end. CI relies on that signal to gate merges.
 set +e
 uv run lrd run \
-    --prompt prompts/classifier_v2_degraded.yaml \
+    --prompt prompts/incident_triage_v2_degraded.yaml \
     --dataset "$DATASET" \
     --db "$DB" \
     --report evals/report_v2.html \

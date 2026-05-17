@@ -22,8 +22,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 @pytest.mark.integration
 async def test_full_pipeline_runs_end_to_end(tmp_path: Path) -> None:
-    cases = load_dataset(REPO_ROOT / "golden_dataset" / "support_emails.json")
-    prompt = load_prompt(REPO_ROOT / "prompts" / "classifier_v1.yaml")
+    cases = load_dataset(REPO_ROOT / "golden_dataset" / "incidents.json")
+    prompt = load_prompt(REPO_ROOT / "prompts" / "incident_triage_v1.yaml")
 
     client = MockLLMClient()
     runner = Runner(client=client, judge=Judge(client), concurrency=8)
@@ -43,8 +43,8 @@ async def test_full_pipeline_runs_end_to_end(tmp_path: Path) -> None:
 
 @pytest.mark.integration
 async def test_diff_detects_changes_between_two_runs() -> None:
-    cases = load_dataset(REPO_ROOT / "golden_dataset" / "support_emails.json")
-    prompt = load_prompt(REPO_ROOT / "prompts" / "classifier_v1.yaml")
+    cases = load_dataset(REPO_ROOT / "golden_dataset" / "incidents.json")
+    prompt = load_prompt(REPO_ROOT / "prompts" / "incident_triage_v1.yaml")
 
     client = MockLLMClient()
     runner = Runner(client=client, judge=Judge(client), concurrency=8)

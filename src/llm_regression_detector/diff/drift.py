@@ -19,7 +19,7 @@ from llm_regression_detector.eval.stats import detect_slow_drift
 class DriftReport(BaseModel):
     """Output of running the slow-drift check over a window of stored runs."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     has_drift: bool
     moving_average: float = Field(ge=0.0, le=1.0)

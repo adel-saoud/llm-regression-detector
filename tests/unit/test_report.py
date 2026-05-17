@@ -24,7 +24,7 @@ def test_render_html_with_diff_shows_regressions() -> None:
     cand = make_run("cand", pass_ids=pass_ids[:28], fail_ids=pass_ids[28:])
     diff = Analyzer().diff(base, cand)
     html = render_html(cand, diff=diff, baseline=base)
-    assert "Regressions" in html
+    assert "Got worse" in html
     assert "CRITICAL" in html
 
 

@@ -23,7 +23,7 @@ async def test_latest_baseline_returns_most_recent(tmp_path: Path) -> None:
     await storage.initialize()
     await storage.save(make_run("r1", pass_ids=["a"], fail_ids=["b"]))
     await storage.save(make_run("r2", pass_ids=["a", "b"], fail_ids=[]))
-    latest = await storage.latest_baseline("support-email-classifier")
+    latest = await storage.latest_baseline("incident-triage")
     assert latest is not None
     assert latest.summary.accuracy == 1.0
 
@@ -33,5 +33,5 @@ async def test_recent_returns_in_descending_order(tmp_path: Path) -> None:
     await storage.initialize()
     for i in range(5):
         await storage.save(make_run(f"r{i}", pass_ids=["a"], fail_ids=[]))
-    runs = await storage.recent("support-email-classifier", limit=3)
+    runs = await storage.recent("incident-triage", limit=3)
     assert len(runs) == 3

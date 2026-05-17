@@ -39,7 +39,7 @@ def _case() -> GoldenCase:
     return GoldenCase(
         id="x",
         input_email="e",
-        expected_category=Category.BILLING,
+        expected_category=Category.P2,
         expected_summary_keywords=["k"],
         difficulty=Difficulty.EASY,
     )

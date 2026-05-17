@@ -25,18 +25,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture
 def golden_dataset() -> list[GoldenCase]:
-    return load_dataset(REPO_ROOT / "golden_dataset" / "support_emails.json")
+    return load_dataset(REPO_ROOT / "golden_dataset" / "incidents.json")
 
 
 @pytest.fixture
 def prompt_v1() -> PromptSpec:
-    return load_prompt(REPO_ROOT / "prompts" / "classifier_v1.yaml")
+    return load_prompt(REPO_ROOT / "prompts" / "incident_triage_v1.yaml")
 
 
 def _make_case(case_id: str, *, passed: bool, score: int = 4) -> CaseResult:
     return CaseResult(
         case_id=case_id,
-        predicted_category="billing",
+        predicted_category="p2",
         predicted_summary="x",
         judge=JudgeScore(category_match=passed, summary_score=score, rationale=""),
         latency_ms=10.0,
@@ -51,7 +51,7 @@ def make_run(
     *,
     pass_ids: list[str],
     fail_ids: list[str],
-    prompt_name: str = "support-email-classifier",
+    prompt_name: str = "incident-triage",
     prompt_version: str = "v1",
     per_category: list[CategoryAccuracy] | None = None,
 ) -> EvalRun:

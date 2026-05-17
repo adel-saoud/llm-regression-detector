@@ -32,69 +32,160 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Remove Streamlit chrome (footer, top deploy bar) */
+    /* ── Font — Plus Jakarta Sans via Google Fonts ─────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"], .stApp, .stMarkdown, .stMetric,
+    [data-testid="stSidebar"], button, input, select, textarea {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+    }
+
+    /* ── Chrome removal ─────────────────────────────────────────────────── */
     footer { visibility: hidden; }
     [data-testid="stHeader"] { display: none; }
 
-    /* Main content area — breathing room */
+    /* ── Main content — breathing room ─────────────────────────────────── */
     [data-testid="stMainBlockContainer"] {
         padding-top: 2.5rem;
-        padding-bottom: 4rem;
+        padding-bottom: 5rem;
+        max-width: 1400px;
     }
 
-    /* KPI cards — subtle blue-tinted card */
-    [data-testid="stMetric"] {
-        background: rgba(88, 166, 255, 0.05);
-        border: 1px solid rgba(88, 166, 255, 0.2);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
+    /* ── Page title ─────────────────────────────────────────────────────── */
+    h1 {
+        font-size: 1.75rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.03em !important;
+        line-height: 1.15 !important;
     }
 
-    /* KPI label — uppercase small-caps style */
-    [data-testid="stMetricLabel"] p {
-        font-size: 0.68rem !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #8b95a5 !important;
-    }
-
-    /* KPI value — tighter tracking, bolder */
-    [data-testid="stMetricValue"] p {
-        font-size: 1.9rem !important;
-        font-weight: 700;
-        letter-spacing: -0.025em;
-        line-height: 1.1;
-    }
-
-    /* Section subheaders — clean weight hierarchy, no decoration */
+    /* ── Section subheaders (st.subheader → h3) ────────────────────────── */
+    /* opacity is relative to the current text colour, so this works in both
+       light mode (dark text × 0.55) and dark mode (light text × 0.55).      */
     h3 {
-        font-size: 0.95rem !important;
-        font-weight: 700;
-        letter-spacing: 0.01em;
-        text-transform: uppercase;
-        opacity: 0.55;
+        font-size: 0.7rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.1em !important;
+        text-transform: uppercase !important;
+        opacity: 0.55 !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* ── KPI cards — clean card with tinted border ──────────────────────── */
+    [data-testid="stMetric"] {
+        background: rgba(99, 102, 241, 0.04);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        border-radius: 14px;
+        padding: 1.1rem 1.35rem 1rem;
+        transition: border-color 180ms ease;
+    }
+    [data-testid="stMetric"]:hover {
+        border-color: rgba(99, 102, 241, 0.35);
+    }
+
+    /* KPI label — opacity adapts automatically to light/dark theme */
+    [data-testid="stMetricLabel"] p {
+        font-size: 0.65rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.09em !important;
+        opacity: 0.55 !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* KPI value — tabular nums, tight tracking */
+    [data-testid="stMetricValue"] {
+        font-variant-numeric: tabular-nums;
+    }
+    [data-testid="stMetricValue"] p {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.035em !important;
+        line-height: 1.05 !important;
+    }
+
+    /* KPI delta */
+    [data-testid="stMetricDelta"] {
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        letter-spacing: -0.01em !important;
         margin-top: 0.25rem !important;
-        margin-bottom: 0.5rem !important;
     }
 
-    /* Caption text — better line-height */
-    [data-testid="stCaptionContainer"] p { line-height: 1.6; }
-
-    /* Sidebar — subtle tint that works in both light and dark mode */
-    [data-testid="stSidebar"] { background-color: rgba(0, 0, 0, 0.04); }
-    [data-testid="stSidebar"] > div:first-child { background-color: transparent; }
-    @media (prefers-color-scheme: dark) {
-        [data-testid="stSidebar"] { background-color: rgba(255, 255, 255, 0.03); }
+    /* ── Caption / secondary text ────────────────────────────────────────── */
+    /* Don't override colour here — let Streamlit's theme vars handle it.
+       Only fix the size so it's consistent everywhere.                        */
+    [data-testid="stCaptionContainer"] p {
+        line-height: 1.65;
+        font-size: 0.8rem !important;
     }
 
-    /* Sidebar nav links — clean list */
-    [data-testid="stSidebarUserContent"] a {
-        text-decoration: none;
-        color: #4b91e2;
-        font-size: 0.85rem;
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    /* The sidebar is *always* dark (#0f1117), so we must force light text
+       here regardless of the user's light/dark mode preference.               */
+    [data-testid="stSidebar"] {
+        background-color: #0f1117;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
-    [data-testid="stSidebarUserContent"] a:hover { text-decoration: underline; }
+    [data-testid="stSidebar"] > div:first-child {
+        background-color: transparent;
+        padding-top: 1.5rem;
+    }
+
+    /* Sidebar heading — bright white */
+    [data-testid="stSidebarUserContent"] h1,
+    [data-testid="stSidebarUserContent"] h2 {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.02em !important;
+        color: #f9fafb !important;
+    }
+
+    /* Sidebar body text — clearly readable on dark bg */
+    [data-testid="stSidebarUserContent"] p,
+    [data-testid="stSidebarUserContent"] span {
+        font-size: 0.8rem !important;
+        color: rgba(255, 255, 255, 0.72) !important;
+        line-height: 1.55 !important;
+    }
+
+    /* Sidebar selectbox label — dimmed but readable on dark bg */
+    [data-testid="stSidebar"] label {
+        font-size: 0.65rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.09em !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    /* ── Dataframe / table ───────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    }
+
+    /* ── Expander header ─────────────────────────────────────────────────── */
+    [data-testid="stExpander"] summary {
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    /* ── Tab labels ──────────────────────────────────────────────────────── */
+    [data-testid="stTabs"] button[role="tab"] {
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    /* ── Horizontal rule ─────────────────────────────────────────────────── */
+    hr {
+        border: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        margin: 1.5rem 0 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -125,10 +216,10 @@ def _short(text: str, n: int = 70) -> str:
 def _compact_tokens(n: int) -> str:
     """Format a token count to fit comfortably inside a KPI card."""
     if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M tok"
+        return f"{n / 1_000_000:.1f}M tokens"
     if n >= 1_000:
-        return f"{n / 1_000:.1f}K tok"
-    return f"{n} tok"
+        return f"{n / 1_000:.1f}K tokens"
+    return f"{n} tokens"
 
 
 def _severity_card(severity: str, delta_pp: float, sig_marker: str) -> None:
@@ -141,7 +232,7 @@ def _severity_card(severity: str, delta_pp: float, sig_marker: str) -> None:
         f'<span style="font-size:1.15rem;font-weight:700;color:{color};">'
         f"{icon} {severity.upper()}</span>"
         f'<span style="font-size:0.95rem;opacity:0.85;"> — '
-        f"{abs(delta_pp):.1f} % pts {direction}{sig_marker}</span>"
+        f"{abs(delta_pp):.1f} pp {direction}{sig_marker}</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -198,17 +289,62 @@ def _runs_to_df(runs: list[EvalRun]) -> pd.DataFrame:
 # ── Sidebar ─────────────────────────────────────────────────────────────────
 
 st.sidebar.title("📊 LLM Regression Detector")
+st.sidebar.caption("Catch quality drops before they reach users.")
 st.sidebar.caption(f"DB: `{DB_PATH}`")
 
 prompts = _list_prompts()
 if not prompts:
-    st.title("No eval runs yet")
-    st.markdown(
-        "Run `uv run lrd run --prompt prompts/classifier_v1.yaml` to generate the first baseline."
-    )
+    st.title("👋 Welcome to LLM Regression Detector")
+    st.markdown("No evaluations recorded yet. Follow these steps to run your first eval.")
+
+    with st.expander("Step 1 — Build your test set", expanded=True):
+        st.markdown("""
+    Create a JSON file at `golden_dataset/my_dataset.json`. Each case needs:
+    - **`id`** — unique slug (e.g. `b001`)
+    - **`topic`** — human label shown in the dashboard (e.g. `"Duplicate charge — refund"`)
+    - **`input_email`** — the text your LLM will receive
+    - **`expected_category`** — the correct answer your LLM should produce
+
+    👉 See `docs/golden-dataset-guide.md` for the full schema and a worked example.
+
+    Or scaffold everything automatically:
+    ```bash
+    uv run lrd init
+    ```
+    """)
+
+    with st.expander("Step 2 — Write your prompt", expanded=True):
+        st.markdown("""
+    Create a YAML at `prompts/my_prompt_v1.yaml` (or let `lrd init` generate one).
+    The YAML defines your system prompt, few-shot examples, and the user template.
+    """)
+
+    with st.expander("Step 3 — Run your first evaluation (baseline)", expanded=True):
+        st.markdown("""
+    ```bash
+    uv run lrd run -p prompts/my_prompt_v1.yaml --no-diff
+    ```
+    This stores the baseline. The dashboard will populate after this run.
+    """)
+
+    with st.expander("Step 4 — Compare a new version", expanded=False):
+        st.markdown("""
+    After changing your prompt or model:
+    ```bash
+    uv run lrd run -p prompts/my_prompt_v2.yaml
+    ```
+    The detector diffs vs the baseline using Wilson 95% confidence intervals.
+    If the drop is statistically significant it exits non-zero — blocking the merge.
+    """)
+
     st.stop()
 
-prompt_name = st.sidebar.selectbox("Select a prompt", prompts, format_func=_humanize)
+prompt_name = st.sidebar.selectbox(
+    "Evaluation target",
+    prompts,
+    format_func=_humanize,
+    help="Each entry is an LLM task you've evaluated. Switch here to compare different tasks.",
+)
 runs = _load_recent(prompt_name)
 df = _runs_to_df(runs)
 
@@ -223,19 +359,23 @@ if len(runs) >= 2 and not df.empty:
     st.sidebar.markdown("**Latest change**")
     st.sidebar.markdown(
         f'<span style="color:{_color};font-weight:700;">{_icon} {_sev.upper()}</span> '
-        f"· `{_delta:+.1f} % pts`  \n"
-        f'<span style="font-size:0.8rem;color:#6b7280;">'
+        f"· `{_delta:+.1f} pp`  \n"
+        f'<span style="font-size:0.8rem;color:rgba(255,255,255,0.55);">'
         f"{runs[0].prompt_version} vs {runs[1].prompt_version}</span>",
         unsafe_allow_html=True,
     )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown(
-    "**Navigate**  \n"
-    "[📊 Overview](#overview)  \n"
-    "[📈 Accuracy history](#accuracy-history)  \n"
-    "[🔍 Version comparison](#version-comparison)"
-)
+with st.sidebar.expander("ℹ️ How to read this"):
+    st.markdown("""
+**KPI cards** — latest run at a glance. Delta is vs the previous run.
+
+**Accuracy history** — each point is one eval run. The shaded band is the 95% confidence interval. Overlapping bands = difference is within noise.
+
+**Version comparison** — pick any two runs to diff. The detector uses Wilson confidence intervals to decide if a drop is real or noise.
+
+**Got worse / Got better tabs** — individual test cases that changed between versions.
+""")
 
 # ── Header ───────────────────────────────────────────────────────────────────
 
@@ -249,10 +389,12 @@ if df.empty:
 latest = df.iloc[0]
 prev = df.iloc[1] if len(df) > 1 else None
 
+_human_name = _humanize(prompt_name)
+_n_runs = len(runs)
 st.caption(
-    f"Prompt ID: `{prompt_name}` · "
+    f"Evaluating **{_human_name}** · "
     f"{int(latest['total'])} test cases · "
-    f"{len(runs)} run{'s' if len(runs) != 1 else ''} recorded"
+    f"{_n_runs} run{'s' if _n_runs != 1 else ''} recorded"
 )
 
 # ── KPIs ────────────────────────────────────────────────────────────────────
@@ -262,12 +404,12 @@ col1.metric(
     "Accuracy",
     f"{latest['accuracy'] * 100:.1f}%",
     delta=(
-        f"{(latest['accuracy'] - prev['accuracy']) * 100:+.1f} % pts" if prev is not None else None
+        f"{(latest['accuracy'] - prev['accuracy']) * 100:+.1f} pp" if prev is not None else None
     ),
     help=(
         f"Share of test cases the model answered correctly · "
-        f"95% confidence range: {latest['ci_low'] * 100:.1f}–{latest['ci_high'] * 100:.1f}% · "
-        "delta vs previous run"
+        f"95% confidence interval: {latest['ci_low'] * 100:.1f}–{latest['ci_high'] * 100:.1f}% · "
+        "pp = percentage points change vs previous run"
     ),
 )
 col2.metric(
@@ -332,6 +474,10 @@ st.markdown(
     "<hr style='margin:1.5rem 0 1.25rem;border:none;border-top:1px solid rgba(128,128,128,0.25);'>",
     unsafe_allow_html=True,
 )
+diff = None
+baseline = None
+candidate = None
+_cand_topic: dict[str, str] = {}
 col_left, col_right = st.columns([3, 2], gap="large")
 
 # ── Left: Accuracy history chart ────────────────────────────────────────────
@@ -447,7 +593,7 @@ with col_right:
             delta_pp = diff.accuracy_delta * 100
             sig_marker = "" if diff.is_significant else " (within noise)"
             _severity_card(diff.severity.value, delta_pp, sig_marker)
-            _cand_summary = {r.case_id: r.predicted_summary for r in candidate.results}
+            _cand_topic = {r.case_id: (r.topic or _expand_case_id(r.case_id)) for r in candidate.results}
 
             # Per-category breakdown
             if baseline.summary.per_category and candidate.summary.per_category:
@@ -459,7 +605,7 @@ with col_right:
                             "Category": cat,
                             "Before": base_cats.get(cat, 0.0),
                             "After": cand_cats.get(cat, 0.0),
-                            "Change (% pts)": (cand_cats.get(cat, 0.0) - base_cats.get(cat, 0.0))
+                            "Change (pp)": (cand_cats.get(cat, 0.0) - base_cats.get(cat, 0.0))
                             * 100,
                         }
                         for cat in sorted(base_cats.keys() | cand_cats.keys())
@@ -471,75 +617,83 @@ with col_right:
                             {
                                 "Before": "{:.1%}",
                                 "After": "{:.1%}",
-                                "Change (% pts)": "{:+.1f}",
+                                "Change (pp)": "{:+.1f}",
                             }
                         ),
                         width="stretch",
                     )
 
-            tab_reg, tab_imp, tab_all = st.tabs(
-                [
-                    f"⬇ Got worse ({len(diff.regressions)})",
-                    f"⬆ Got better ({len(diff.improvements)})",
-                    "All test cases",
-                ]
+
+# ── Full-width: Case-level diff ──────────────────────────────────────────────
+
+if diff is not None and baseline is not None and candidate is not None:
+    st.markdown(
+        "<hr style='margin:1.5rem 0 1.25rem;border:none;border-top:1px solid rgba(128,128,128,0.25);'>",
+        unsafe_allow_html=True,
+    )
+    st.subheader("Case-level diff")
+    st.caption(
+        f"**{baseline.prompt_version}** → **{candidate.prompt_version}** · "
+        f"{len(diff.regressions)} regression{'s' if len(diff.regressions) != 1 else ''} · "
+        f"{len(diff.improvements)} improvement{'s' if len(diff.improvements) != 1 else ''} · "
+        f"Score = AI judge rating 1 (wrong) to 5 (perfect)"
+    )
+    tab_reg, tab_imp, tab_all = st.tabs(
+        [
+            f"⬇ Got worse ({len(diff.regressions)})",
+            f"⬆ Got better ({len(diff.improvements)})",
+            "All test cases",
+        ]
+    )
+    with tab_reg:
+        if diff.regressions:
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Topic": _cand_topic.get(d.case_id, d.case_id),
+                            "Before (1–5)": d.baseline_summary_score,
+                            "After (1–5)": d.candidate_summary_score,
+                            "Change": d.candidate_summary_score - d.baseline_summary_score,
+                        }
+                        for d in diff.regressions
+                    ]
+                ),
+                width="stretch",
             )
-            with tab_reg:
-                if diff.regressions:
-                    st.dataframe(
-                        pd.DataFrame(
-                            [
-                                {
-                                    "Case": _expand_case_id(d.case_id),
-                                    "Topic": _short(_cand_summary.get(d.case_id, "")),
-                                    "Score before": d.baseline_summary_score,
-                                    "Score after": d.candidate_summary_score,
-                                    "Change": (
-                                        d.candidate_summary_score - d.baseline_summary_score
-                                    ),
-                                }
-                                for d in diff.regressions
-                            ]
-                        ),
-                        width="stretch",
-                    )
-                else:
-                    st.success("No regressions — quality held across all test cases.")
-            with tab_imp:
-                if diff.improvements:
-                    st.dataframe(
-                        pd.DataFrame(
-                            [
-                                {
-                                    "Case": _expand_case_id(d.case_id),
-                                    "Topic": _short(_cand_summary.get(d.case_id, "")),
-                                    "Score before": d.baseline_summary_score,
-                                    "Score after": d.candidate_summary_score,
-                                    "Change": (
-                                        d.candidate_summary_score - d.baseline_summary_score
-                                    ),
-                                }
-                                for d in diff.improvements
-                            ]
-                        ),
-                        width="stretch",
-                    )
-                else:
-                    st.info("No improvements detected.")
-            with tab_all:
-                if candidate:
-                    cand_df = pd.DataFrame(
-                        [
-                            {
-                                "Case": _expand_case_id(r.case_id),
-                                "Topic": _short(r.predicted_summary),
-                                "Result": "✓ Pass" if r.passed else "✗ Fail",
-                                "Expected": _CASE_CATEGORY.get(r.case_id[:1].lower(), "?"),
-                                "AI prediction": r.predicted_category.title(),
-                                "Score": r.judge.summary_score,
-                                "Latency (ms)": round(r.latency_ms, 1),
-                            }
-                            for r in candidate.results
-                        ]
-                    )
-                    st.dataframe(cand_df, width="stretch")
+        else:
+            st.success("No regressions — quality held across all test cases.")
+    with tab_imp:
+        if diff.improvements:
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Topic": _cand_topic.get(d.case_id, d.case_id),
+                            "Before (1–5)": d.baseline_summary_score,
+                            "After (1–5)": d.candidate_summary_score,
+                            "Change": d.candidate_summary_score - d.baseline_summary_score,
+                        }
+                        for d in diff.improvements
+                    ]
+                ),
+                width="stretch",
+            )
+        else:
+            st.info("No improvements detected.")
+    with tab_all:
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Topic": r.topic or r.case_id,
+                        "Result": "✓ Pass" if r.passed else "✗ Fail",
+                        "AI prediction": r.predicted_category,
+                        "Score (1–5)": r.judge.summary_score,
+                        "Latency (ms)": round(r.latency_ms, 1),
+                    }
+                    for r in candidate.results
+                ]
+            ),
+            width="stretch",
+        )

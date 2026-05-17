@@ -30,6 +30,13 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Detect changed prompt
+        id: changed
+        run: |
+          PROMPT=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            -- 'prompts/*.yaml' | head -1)
+          echo "prompt=${PROMPT:-prompts/incident_triage_v1.yaml}" >> "$GITHUB_OUTPUT"
+
       - name: Restore baseline DB
         uses: actions/cache@v4
         with:
@@ -45,8 +52,8 @@ jobs:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
           uv run lrd run \
-            --prompt prompts/classifier_v1.yaml \
-            --dataset golden_dataset/support_emails.json \
+            --prompt "${{ steps.changed.outputs.prompt }}" \
+            --dataset golden_dataset/incidents.json \
             --report evals/report.html \
             --diff \
             --save \
@@ -55,29 +62,8 @@ jobs:
 
       - name: Generate PR comment
         if: always()
-        id: pr_comment
         run: |
-          uv run python -c "
-          import asyncio, sys
-          from pathlib import Path
-          from llm_regression_detector.diff.analyzer import Analyzer
-          from llm_regression_detector.report.pr_comment import render_pr_comment
-          from llm_regression_detector.storage.sqlite import SQLiteStorage
-
-          async def go():
-              s = SQLiteStorage(Path('evals/runs.db'))
-              await s.initialize()
-              runs = await s.recent('support-email-classifier', limit=2)
-              if not runs:
-                  return ''
-              candidate = runs[0]
-              baseline = runs[1] if len(runs) > 1 else None
-              diff = Analyzer().diff(baseline, candidate) if baseline else None
-              return render_pr_comment(candidate, diff)
-          out = asyncio.run(go())
-          Path('pr_comment.md').write_text(out)
-          print(out)
-          "
+          uv run lrd pr-comment --output pr_comment.md
 
       - name: Upload report
         if: always()

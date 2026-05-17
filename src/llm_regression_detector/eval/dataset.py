@@ -32,10 +32,11 @@ class GoldenCase(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: str
+    topic: str | None = None
     input_email: str
-    expected_category: Category
+    expected_category: str  # plain str so any category system works (billing/p0/etc.)
     expected_summary_keywords: list[str] = Field(default_factory=list[str])
-    difficulty: Difficulty
+    difficulty: Difficulty | None = None  # optional — not all datasets need it
     notes: str | None = None
 
 
@@ -82,6 +83,7 @@ class CaseResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     case_id: str
+    topic: str | None = None
     predicted_category: str
     predicted_summary: str
     judge: JudgeScore

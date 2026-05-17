@@ -134,6 +134,20 @@ class SQLiteStorage:
             rows = await cursor.fetchall()
         return [_load_run(r[0], int(r[1])) for r in rows]
 
+    async def recent_any(self, limit: int = 2) -> list[EvalRun]:
+        """Return the N most recent runs across all prompts — newest first."""
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                """
+                SELECT payload_json, schema_version FROM eval_runs
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            rows = await cursor.fetchall()
+        return [_load_run(r[0], int(r[1])) for r in rows]
+
 
 def _load_run(payload_json: str, row_schema_version: int) -> EvalRun:
     """Load an ``EvalRun`` row, applying forward-compat defaults for older schemas."""

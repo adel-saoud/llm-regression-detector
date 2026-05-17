@@ -124,13 +124,14 @@ class Runner:
             except Exception as exc:
                 log.warning("eval.case.judge_failed", case_id=case.id, err=str(exc))
                 judge_score = JudgeScore(
-                    category_match=predicted["category"] == case.expected_category.value,
+                    category_match=predicted["category"] == case.expected_category,
                     summary_score=1,
                     rationale=f"Judge failed: {exc}",
                 )
 
             return CaseResult(
                 case_id=case.id,
+                topic=case.topic,
                 predicted_category=predicted["category"],
                 predicted_summary=predicted["summary"],
                 judge=judge_score,
@@ -188,7 +189,7 @@ def _per_category_breakdown(
         case = cases.get(result.case_id)
         if case is None:
             continue
-        category = case.expected_category.value
+        category = case.expected_category
         bucket_total[category] += 1
         if result.passed:
             bucket_passed[category] += 1

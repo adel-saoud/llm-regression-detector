@@ -37,9 +37,9 @@ def test_run_creates_report_and_persists(tmp_path: Path) -> None:
         [
             "run",
             "--prompt",
-            str(REPO_ROOT / "prompts" / "classifier_v1.yaml"),
+            str(REPO_ROOT / "prompts" / "incident_triage_v1.yaml"),
             "--dataset",
-            str(REPO_ROOT / "golden_dataset" / "support_emails.json"),
+            str(REPO_ROOT / "golden_dataset" / "incidents.json"),
             "--db",
             str(db),
             "--report",
@@ -60,9 +60,9 @@ def test_run_with_consensus_n_flag(tmp_path: Path) -> None:
         [
             "run",
             "--prompt",
-            str(REPO_ROOT / "prompts" / "classifier_v1.yaml"),
+            str(REPO_ROOT / "prompts" / "incident_triage_v1.yaml"),
             "--dataset",
-            str(REPO_ROOT / "golden_dataset" / "support_emails.json"),
+            str(REPO_ROOT / "golden_dataset" / "incidents.json"),
             "--db",
             str(db),
             "--consensus-n",
@@ -79,9 +79,9 @@ def test_run_then_diff_via_cli(tmp_path: Path) -> None:
     db = tmp_path / "runs.db"
     base = [
         "--prompt",
-        str(REPO_ROOT / "prompts" / "classifier_v1.yaml"),
+        str(REPO_ROOT / "prompts" / "incident_triage_v1.yaml"),
         "--dataset",
-        str(REPO_ROOT / "golden_dataset" / "support_emails.json"),
+        str(REPO_ROOT / "golden_dataset" / "incidents.json"),
         "--db",
         str(db),
         "--no-diff",

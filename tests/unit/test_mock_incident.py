@@ -8,7 +8,6 @@ import pytest
 
 from llm_regression_detector.llm.mock import MockLLMClient, classify_incident
 
-
 # ── classify_incident unit tests ────────────────────────────────────────────
 
 
@@ -19,7 +18,9 @@ def testclassify_incident_p0_outage() -> None:
 
 
 def testclassify_incident_p0_data_breach() -> None:
-    result = classify_incident("Security alert: data breach detected, active exfiltration in progress.")
+    result = classify_incident(
+        "Security alert: data breach detected, active exfiltration in progress."
+    )
     assert result.category == "p0"
 
 
@@ -74,7 +75,10 @@ def _incident_messages(report: str, *, few_shots: bool = True) -> list[dict[str,
     if few_shots:
         msgs.append({"role": "user", "content": "Alert: all API endpoints returning 503."})
         msgs.append(
-            {"role": "assistant", "content": json.dumps({"category": "p0", "summary": "All APIs down."})}
+            {
+                "role": "assistant",
+                "content": json.dumps({"category": "p0", "summary": "All APIs down."}),
+            }
         )
     msgs.append({"role": "user", "content": f"Incident report: {report}"})
     return msgs
@@ -93,7 +97,8 @@ async def test_mock_incident_mode_with_few_shots() -> None:
 async def test_mock_incident_mode_p0_detected() -> None:
     client = MockLLMClient()
     msgs = _incident_messages(
-        "CRITICAL: payment service returning 500 on all checkout attempts. Revenue impact confirmed.",
+        "CRITICAL: payment service returning 500 on all checkout attempts."
+        " Revenue impact confirmed.",
         few_shots=True,
     )
     response = await client.complete(msgs)
@@ -135,9 +140,12 @@ async def test_mock_email_mode_not_affected() -> None:
     """Original email classification is unaffected when system prompt has no p0/p1/p2/p3."""
     client = MockLLMClient()
     msgs = [
-        {"role": "system", "content": "Classify emails as billing, technical, account, or general."},
+        {"role": "system", "content": "Classify emails as billing, technical, account, or general."},  # noqa: E501
         {"role": "user", "content": "I was charged twice this month."},
-        {"role": "assistant", "content": json.dumps({"category": "billing", "summary": "Duplicate charge."})},
+        {
+            "role": "assistant",
+            "content": json.dumps({"category": "billing", "summary": "Duplicate charge."}),
+        },
         {"role": "user", "content": "I was charged twice this month. Please refund."},
     ]
     response = await client.complete(msgs)

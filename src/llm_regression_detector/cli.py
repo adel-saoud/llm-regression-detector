@@ -247,7 +247,11 @@ async def _report_async(run_id: str, output: Path, pr_comment: bool, db: Path) -
 def pr_comment_cmd(
     prompt_name: Annotated[
         str | None,
-        typer.Option("--prompt-name", "-n", help="Prompt name to look up. Defaults to the most recent run."),
+        typer.Option(
+            "--prompt-name",
+            "-n",
+            help="Prompt name to look up. Defaults to the most recent run.",
+        ),
     ] = None,
     db: Annotated[Path, typer.Option(help="SQLite path.")] = Path("evals/runs.db"),
     output: Annotated[
@@ -322,7 +326,7 @@ def init_cmd(
         str,
         typer.Option(
             "--description",
-            prompt="One-line description of what your LLM does (e.g. Classifies customer support emails)",
+            prompt="One-line description of what your LLM does (e.g. Classifies customer emails)",
             help="Used in the generated YAML description field.",
         ),
     ],
@@ -347,9 +351,10 @@ def init_cmd(
     cats_quoted = ", ".join(f'"{c}"' for c in cats)
     few_shot_lines: list[str] = []
     for cat in cats[:3]:
+        summary = "One-sentence summary of the input."
         few_shot_lines.append(
             f'  - input: "Example input for category {cat}"\n'
-            f'    output: \'{{"category": "{cat}", "summary": "One-sentence summary of the input."}}\''
+            f'    output: \'{{"category": "{cat}", "summary": "{summary}"}}\''
         )
     few_shots_yaml = "\n".join(few_shot_lines)
     prompt_yaml = f"""name: {name}

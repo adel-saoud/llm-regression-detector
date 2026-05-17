@@ -370,9 +370,10 @@ with st.sidebar.expander("ℹ️ How to read this"):
     st.markdown("""
 **KPI cards** — latest run at a glance. Delta is vs the previous run.
 
-**Accuracy history** — each point is one eval run. The shaded band is the 95% confidence interval. Overlapping bands = difference is within noise.
+**Accuracy history** — each point is one eval run. The shaded band is the 95% CI.
+Overlapping bands = difference is within noise.
 
-**Version comparison** — pick any two runs to diff. The detector uses Wilson confidence intervals to decide if a drop is real or noise.
+**Version comparison** — pick any two runs to diff. Wilson CIs decide if a drop is real or noise.
 
 **Got worse / Got better tabs** — individual test cases that changed between versions.
 """)
@@ -593,7 +594,10 @@ with col_right:
             delta_pp = diff.accuracy_delta * 100
             sig_marker = "" if diff.is_significant else " (within noise)"
             _severity_card(diff.severity.value, delta_pp, sig_marker)
-            _cand_topic = {r.case_id: (r.topic or _expand_case_id(r.case_id)) for r in candidate.results}
+            _cand_topic = {
+                r.case_id: (r.topic or _expand_case_id(r.case_id))
+                for r in candidate.results
+            }
 
             # Per-category breakdown
             if baseline.summary.per_category and candidate.summary.per_category:
@@ -628,7 +632,8 @@ with col_right:
 
 if diff is not None and baseline is not None and candidate is not None:
     st.markdown(
-        "<hr style='margin:1.5rem 0 1.25rem;border:none;border-top:1px solid rgba(128,128,128,0.25);'>",
+        "<hr style='margin:1.5rem 0 1.25rem;border:none;"
+        "border-top:1px solid rgba(128,128,128,0.25);'>",
         unsafe_allow_html=True,
     )
     st.subheader("Case-level diff")

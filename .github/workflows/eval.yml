@@ -33,7 +33,7 @@ jobs:
       - name: Detect changed prompt
         id: changed
         run: |
-          PROMPT=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+          PROMPT=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD \
             -- 'prompts/*.yaml' | head -1)
           echo "prompt=${PROMPT:-prompts/incident_triage_v1.yaml}" >> "$GITHUB_OUTPUT"
 

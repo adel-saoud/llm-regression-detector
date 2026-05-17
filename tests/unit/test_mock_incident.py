@@ -140,7 +140,10 @@ async def test_mock_email_mode_not_affected() -> None:
     """Original email classification is unaffected when system prompt has no p0/p1/p2/p3."""
     client = MockLLMClient()
     msgs = [
-        {"role": "system", "content": "Classify emails as billing, technical, account, or general."},  # noqa: E501
+        {
+            "role": "system",
+            "content": "Classify emails as billing, technical, account, or general.",
+        },
         {"role": "user", "content": "I was charged twice this month."},
         {
             "role": "assistant",

@@ -317,10 +317,8 @@ class MockLLMClient:
         )
         full_context = "\n".join(m.get("content", "") for m in messages)
         has_few_shots = any(m.get("role") == "assistant" for m in messages)
-        system_msg = next(
-            (m["content"] for m in messages if m.get("role") == "system"), ""
-        )
-        is_incident_mode = bool(re.search(r'\bp[0-3]\b', system_msg))
+        system_msg = next((m["content"] for m in messages if m.get("role") == "system"), "")
+        is_incident_mode = bool(re.search(r"\bp[0-3]\b", system_msg))
         classification = classify_incident(user_msg) if is_incident_mode else _classify(user_msg)
 
         if _looks_like_judge_prompt(full_context):

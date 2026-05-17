@@ -595,8 +595,7 @@ with col_right:
             sig_marker = "" if diff.is_significant else " (within noise)"
             _severity_card(diff.severity.value, delta_pp, sig_marker)
             _cand_topic = {
-                r.case_id: (r.topic or _expand_case_id(r.case_id))
-                for r in candidate.results
+                r.case_id: (r.topic or _expand_case_id(r.case_id)) for r in candidate.results
             }
 
             # Per-category breakdown

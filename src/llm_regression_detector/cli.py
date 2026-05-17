@@ -402,9 +402,7 @@ user_template: |
     console.print()
     console.print("[bold]Next steps:[/bold]")
     console.print(f"  1. Edit {dataset_path} — replace the placeholder cases with real examples")
-    console.print(
-        "     (aim for 30–50 labelled cases; see docs/golden-dataset-guide.md)"
-    )
+    console.print("     (aim for 30–50 labelled cases; see docs/golden-dataset-guide.md)")
     console.print(f"  2. Edit {prompt_path} — refine the system prompt and few-shot examples")
     console.print("  3. Run your first baseline:")
     console.print(f"     [bold]uv run lrd run -p {prompt_path} --no-diff[/bold]")

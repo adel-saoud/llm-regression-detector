@@ -392,7 +392,7 @@ user_template: |
             {
                 "id": f"{cat[0]}{index_str}",
                 "topic": f"Example {cat} case {i + 1}",
-                "input_email": f"Replace this with a real example input for the '{cat}' category.",
+                "input_text": f"Replace this with a real example input for the '{cat}' category.",
                 "expected_category": cat,
             }
         )

@@ -97,7 +97,7 @@ class Runner:
         log: structlog.stdlib.BoundLogger,
     ) -> CaseResult:
         async with self._semaphore:
-            messages = prompt.render_messages(case.input_email)
+            messages = prompt.render_messages(case.input_text)
             try:
                 response = await self._client.complete(messages, temperature=0.0)
             except Exception as exc:

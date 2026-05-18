@@ -33,7 +33,7 @@ class GoldenCase(BaseModel):
 
     id: str
     topic: str | None = None
-    input_email: str
+    input_text: str
     expected_category: str  # plain str so any category system works (billing/p0/etc.)
     expected_summary_keywords: list[str] = Field(default_factory=list[str])
     difficulty: Difficulty | None = None  # optional — not all datasets need it

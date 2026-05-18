@@ -2,319 +2,319 @@
   {
     "id": "p0001",
     "topic": "Payment service — complete checkout outage",
-    "input_email": "CRITICAL: Payment service returning 500 on 100% of checkout attempts for the last 6 minutes. All transactions failing. Revenue impact confirmed — ~$12k/min.",
+    "input_text": "CRITICAL: Payment service returning 500 on 100% of checkout attempts for the last 6 minutes. All transactions failing. Revenue impact confirmed — ~$12k/min.",
     "expected_category": "p0"
   },
   {
     "id": "p0002",
     "topic": "Database primary node failure — all writes down",
-    "input_email": "DB primary node has failed. All write operations returning connection timeout. Read replicas still serving reads but any mutation is failing. 100% of users affected for writes.",
+    "input_text": "DB primary node has failed. All write operations returning connection timeout. Read replicas still serving reads but any mutation is failing. 100% of users affected for writes.",
     "expected_category": "p0"
   },
   {
     "id": "p0003",
     "topic": "Auth service down — 100% login failure",
-    "input_email": "Auth service is returning 503 on all login attempts. No users can sign in. Existing sessions still valid but any new session creation fails. Started 4 minutes ago.",
+    "input_text": "Auth service is returning 503 on all login attempts. No users can sign in. Existing sessions still valid but any new session creation fails. Started 4 minutes ago.",
     "expected_category": "p0"
   },
   {
     "id": "p0004",
     "topic": "Active data breach — exfiltration detected",
-    "input_email": "Security alert: anomalous outbound data transfer detected from prod DB replica. Pattern consistent with bulk exfiltration. Estimated 200k user records potentially exposed. Isolating now.",
+    "input_text": "Security alert: anomalous outbound data transfer detected from prod DB replica. Pattern consistent with bulk exfiltration. Estimated 200k user records potentially exposed. Isolating now.",
     "expected_category": "p0"
   },
   {
     "id": "p0005",
     "topic": "CDN down — entire app returning 502 globally",
-    "input_email": "Our CDN provider is having an outage. All edge nodes returning 502. The entire app is unreachable from every region. Origin servers are healthy but traffic can't reach them.",
+    "input_text": "Our CDN provider is having an outage. All edge nodes returning 502. The entire app is unreachable from every region. Origin servers are healthy but traffic can't reach them.",
     "expected_category": "p0"
   },
   {
     "id": "p0006",
     "topic": "API gateway down — all API calls failing",
-    "input_email": "API gateway is down. Every API endpoint returning 503. This affects our web app, mobile apps, and all third-party integrations simultaneously. Started 9 minutes ago.",
+    "input_text": "API gateway is down. Every API endpoint returning 503. This affects our web app, mobile apps, and all third-party integrations simultaneously. Started 9 minutes ago.",
     "expected_category": "p0"
   },
   {
     "id": "p0007",
     "topic": "SSL certificate expired — security warning for all users",
-    "input_email": "SSL cert for app.company.com expired 12 minutes ago. All browsers showing security warning. Users cannot proceed past the warning without clicking through. Effectively a full outage.",
+    "input_text": "SSL cert for app.company.com expired 12 minutes ago. All browsers showing security warning. Users cannot proceed past the warning without clicking through. Effectively a full outage.",
     "expected_category": "p0"
   },
   {
     "id": "p0008",
     "topic": "Critical email queue stuck — 2h backlog",
-    "input_email": "Background job worker is stuck. Critical transactional emails (password resets, account verifications, purchase confirmations) have not been delivered for 2 hours. 8,400 emails queued.",
+    "input_text": "Background job worker is stuck. Critical transactional emails (password resets, account verifications, purchase confirmations) have not been delivered for 2 hours. 8,400 emails queued.",
     "expected_category": "p0"
   },
   {
     "id": "p0009",
     "topic": "Data deletion bug — user data being permanently deleted",
-    "input_email": "BUG: account deletion job is running against the wrong query. It is deleting active user records, not just soft-deleted ones. Stopped the job but 340 active accounts affected. Data may be unrecoverable.",
+    "input_text": "BUG: account deletion job is running against the wrong query. It is deleting active user records, not just soft-deleted ones. Stopped the job but 340 active accounts affected. Data may be unrecoverable.",
     "expected_category": "p0"
   },
   {
     "id": "p0010",
     "topic": "Deploy corrupted sessions — all users logged out",
-    "input_email": "The 14:30 deploy rotated the session secret key incorrectly. All active user sessions have been invalidated. Every logged-in user has been signed out globally. Rolling back now.",
+    "input_text": "The 14:30 deploy rotated the session secret key incorrectly. All active user sessions have been invalidated. Every logged-in user has been signed out globally. Rolling back now.",
     "expected_category": "p0"
   },
   {
     "id": "p0011",
     "topic": "DNS misconfiguration — primary domain not resolving",
-    "input_email": "Primary domain app.company.com is returning NXDOMAIN. DNS change pushed 18 minutes ago has a typo in the A record. App is completely unreachable. Revert in progress.",
+    "input_text": "Primary domain app.company.com is returning NXDOMAIN. DNS change pushed 18 minutes ago has a typo in the A record. App is completely unreachable. Revert in progress.",
     "expected_category": "p0"
   },
   {
     "id": "p0012",
     "topic": "Real-time collaboration — data corruption and overwrites",
-    "input_email": "Multiple customers reporting that collaborative edits are overwriting each other's work and corrupting document state. Data loss confirmed in at least 15 documents across 6 enterprise accounts. Disabling the feature now.",
+    "input_text": "Multiple customers reporting that collaborative edits are overwriting each other's work and corrupting document state. Data loss confirmed in at least 15 documents across 6 enterprise accounts. Disabling the feature now.",
     "expected_category": "p0"
   },
   {
     "id": "p1001",
     "topic": "Checkout broken for saved payment methods",
-    "input_email": "Users with saved cards cannot complete checkout — getting a generic payment error on the final step. Users who enter a new card manually are not affected. Impacts ~60% of our returning customers.",
+    "input_text": "Users with saved cards cannot complete checkout — getting a generic payment error on the final step. Users who enter a new card manually are not affected. Impacts ~60% of our returning customers.",
     "expected_category": "p1"
   },
   {
     "id": "p1002",
     "topic": "Search returning no results for all queries",
-    "input_email": "Search is returning zero results for every query across all accounts. Elasticsearch cluster is healthy but the query parser appears to be broken after the config change at 10:15. All users affected.",
+    "input_text": "Search is returning zero results for every query across all accounts. Elasticsearch cluster is healthy but the query parser appears to be broken after the config change at 10:15. All users affected.",
     "expected_category": "p1"
   },
   {
     "id": "p1003",
     "topic": "Mobile app crashing on launch — iOS 17+",
-    "input_email": "iOS app crashing on launch for all iOS 17+ users. Started after App Store release 3.4.1 went live. Crash in the new onboarding module. ~40% of our mobile DAU on iOS 17.",
+    "input_text": "iOS app crashing on launch for all iOS 17+ users. Started after App Store release 3.4.1 went live. Crash in the new onboarding module. ~40% of our mobile DAU on iOS 17.",
     "expected_category": "p1"
   },
   {
     "id": "p1004",
     "topic": "Bulk export timing out for all users",
-    "input_email": "All bulk data exports are timing out regardless of export size. Even 10-row exports are failing after 30 seconds. The export worker queue appears healthy but jobs are hanging at the DB query step.",
+    "input_text": "All bulk data exports are timing out regardless of export size. Even 10-row exports are failing after 30 seconds. The export worker queue appears healthy but jobs are hanging at the DB query step.",
     "expected_category": "p1"
   },
   {
     "id": "p1005",
     "topic": "Webhook delivery failing — all enterprise customers",
-    "input_email": "Webhook delivery has been failing for all enterprise customers since 08:00 UTC. Events are queuing up but none are being delivered. Our enterprise SLA requires <5min delivery. 4 hours of backlog now.",
+    "input_text": "Webhook delivery has been failing for all enterprise customers since 08:00 UTC. Events are queuing up but none are being delivered. Our enterprise SLA requires <5min delivery. 4 hours of backlog now.",
     "expected_category": "p1"
   },
   {
     "id": "p1006",
     "topic": "2FA SMS not delivering — users locked out",
-    "input_email": "SMS 2FA codes not being delivered. Our SMS provider is returning success but codes are not arriving. Users who require 2FA to log in are completely locked out. Affects ~30% of our user base.",
+    "input_text": "SMS 2FA codes not being delivered. Our SMS provider is returning success but codes are not arriving. Users who require 2FA to log in are completely locked out. Affects ~30% of our user base.",
     "expected_category": "p1"
   },
   {
     "id": "p1007",
     "topic": "Dashboard loading over 30 seconds for all users",
-    "input_email": "Main dashboard is taking 30-90 seconds to load for all users. Tracing shows the issue is a slow aggregation query introduced in today's deploy. Users are timing out and refreshing, making it worse.",
+    "input_text": "Main dashboard is taking 30-90 seconds to load for all users. Tracing shows the issue is a slow aggregation query introduced in today's deploy. Users are timing out and refreshing, making it worse.",
     "expected_category": "p1"
   },
   {
     "id": "p1008",
     "topic": "File upload failing for files over 1MB",
-    "input_email": "File uploads failing for any file over 1MB. Under 1MB uploads fine. Error is a 413 from the new nginx config — the client_max_body_size was accidentally set to 1M instead of 100M.",
+    "input_text": "File uploads failing for any file over 1MB. Under 1MB uploads fine. Error is a 413 from the new nginx config — the client_max_body_size was accidentally set to 1M instead of 100M.",
     "expected_category": "p1"
   },
   {
     "id": "p1009",
     "topic": "Email notifications not sent for 4 hours",
-    "input_email": "Email notification worker has been silently failing for 4 hours — no errors surfaced, just no emails going out. 22,000 notifications in the backlog. Affects all users who rely on email for alerts.",
+    "input_text": "Email notification worker has been silently failing for 4 hours — no errors surfaced, just no emails going out. 22,000 notifications in the backlog. Affects all users who rely on email for alerts.",
     "expected_category": "p1"
   },
   {
     "id": "p1010",
     "topic": "API rate limiting misfiring — blocking at 10% of normal limit",
-    "input_email": "Rate limiter is triggering at 10% of the configured threshold due to a Redis key prefix collision after the namespace migration. Legitimate API traffic is being 429'd across all customers.",
+    "input_text": "Rate limiter is triggering at 10% of the configured threshold due to a Redis key prefix collision after the namespace migration. Legitimate API traffic is being 429'd across all customers.",
     "expected_category": "p1"
   },
   {
     "id": "p1011",
     "topic": "Okta SSO integration broken",
-    "input_email": "Okta SAML integration is broken — users trying to log in via SSO are getting a SAML assertion error. All enterprise customers using Okta cannot access the app. Certificate may have rotated.",
+    "input_text": "Okta SAML integration is broken — users trying to log in via SSO are getting a SAML assertion error. All enterprise customers using Okta cannot access the app. Certificate may have rotated.",
     "expected_category": "p1"
   },
   {
     "id": "p1012",
     "topic": "Billing invoices generating with wrong amounts",
-    "input_email": "Billing invoices generated this morning have incorrect amounts — appears to be an off-by-100 error (amounts in cents displayed as dollars). ~1,200 invoices sent to customers with wrong totals.",
+    "input_text": "Billing invoices generated this morning have incorrect amounts — appears to be an off-by-100 error (amounts in cents displayed as dollars). ~1,200 invoices sent to customers with wrong totals.",
     "expected_category": "p1"
   },
   {
     "id": "p1013",
     "topic": "Report generation stuck in processing for all users",
-    "input_email": "All report generation jobs are stuck in 'processing' state indefinitely. The report worker is running but not picking up jobs from the queue. No reports have completed in the last 3 hours.",
+    "input_text": "All report generation jobs are stuck in 'processing' state indefinitely. The report worker is running but not picking up jobs from the queue. No reports have completed in the last 3 hours.",
     "expected_category": "p1"
   },
   {
     "id": "p1014",
     "topic": "Video playback failing on Firefox",
-    "input_email": "Video playback is completely broken on Firefox — all versions. Videos show a black screen with no error message. Chrome, Safari, and Edge are unaffected. Firefox accounts for 18% of our web traffic.",
+    "input_text": "Video playback is completely broken on Firefox — all versions. Videos show a black screen with no error message. Chrome, Safari, and Edge are unaffected. Firefox accounts for 18% of our web traffic.",
     "expected_category": "p1"
   },
   {
     "id": "p1015",
     "topic": "New accounts unable to complete onboarding",
-    "input_email": "Newly created accounts are stuck on the last onboarding step — the workspace setup call is returning 422 due to a validation regression in the API. No new customer can become active. Affects all signups since 09:00.",
+    "input_text": "Newly created accounts are stuck on the last onboarding step — the workspace setup call is returning 422 due to a validation regression in the API. No new customer can become active. Affects all signups since 09:00.",
     "expected_category": "p1"
   },
   {
     "id": "p2001",
     "topic": "CSV export failing for large reports",
-    "input_email": "CSV export is failing for any report with more than 10,000 rows. The job hits a memory limit and the export returns an error. Smaller reports export fine. Affects power users and data teams.",
+    "input_text": "CSV export is failing for any report with more than 10,000 rows. The job hits a memory limit and the export returns an error. Smaller reports export fine. Affects power users and data teams.",
     "expected_category": "p2"
   },
   {
     "id": "p2002",
     "topic": "PDF reports missing charts",
-    "input_email": "PDF exports of reports are missing all chart visualizations — the data tables are present but chart sections are blank. HTML reports and CSV exports are unaffected. Issue started after last week's Puppeteer upgrade.",
+    "input_text": "PDF exports of reports are missing all chart visualizations — the data tables are present but chart sections are blank. HTML reports and CSV exports are unaffected. Issue started after last week's Puppeteer upgrade.",
     "expected_category": "p2"
   },
   {
     "id": "p2003",
     "topic": "Slow user search for large accounts",
-    "input_email": "User search within admin panel is taking 5-10 seconds for accounts with more than 1,000 members. Normal-sized accounts are unaffected. Missing index on the members table after the schema migration.",
+    "input_text": "User search within admin panel is taking 5-10 seconds for accounts with more than 1,000 members. Normal-sized accounts are unaffected. Missing index on the members table after the schema migration.",
     "expected_category": "p2"
   },
   {
     "id": "p2004",
     "topic": "Dark mode toggle not persisting across sessions",
-    "input_email": "Dark mode preference is not being saved between sessions. Users set dark mode, it works for the current session, but reverts to light mode on next login. Theme preference is not being written to user settings.",
+    "input_text": "Dark mode preference is not being saved between sessions. Users set dark mode, it works for the current session, but reverts to light mode on next login. Theme preference is not being written to user settings.",
     "expected_category": "p2"
   },
   {
     "id": "p2005",
     "topic": "Audit log pagination broken — only page 1 loads",
-    "input_email": "Clicking to page 2+ on the audit log returns an empty result set. Page 1 loads correctly. Offset calculation in the audit log query is using the wrong parameter name after a recent refactor.",
+    "input_text": "Clicking to page 2+ on the audit log returns an empty result set. Page 1 loads correctly. Offset calculation in the audit log query is using the wrong parameter name after a recent refactor.",
     "expected_category": "p2"
   },
   {
     "id": "p2006",
     "topic": "Slack integration not posting notifications",
-    "input_email": "Slack integration has stopped posting notifications for all users who connected via the new OAuth flow. Legacy OAuth connections are still working. Affects integrations created in the last 2 weeks.",
+    "input_text": "Slack integration has stopped posting notifications for all users who connected via the new OAuth flow. Legacy OAuth connections are still working. Affects integrations created in the last 2 weeks.",
     "expected_category": "p2"
   },
   {
     "id": "p2007",
     "topic": "Scheduled reports not emailing on weekends",
-    "input_email": "Scheduled weekly reports that are configured to send on weekends are not being delivered. Weekday schedules work fine. The cron expression for weekend jobs appears to have a bug in the scheduler config.",
+    "input_text": "Scheduled weekly reports that are configured to send on weekends are not being delivered. Weekday schedules work fine. The cron expression for weekend jobs appears to have a bug in the scheduler config.",
     "expected_category": "p2"
   },
   {
     "id": "p2008",
     "topic": "Deprecated API v1 endpoint returning 404",
-    "input_email": "The /api/v1/users endpoint is returning 404 — it was supposed to remain live with a deprecation notice until Q3 but was removed early in the last deploy. v2 endpoint is unaffected. Some customers using v1 are broken.",
+    "input_text": "The /api/v1/users endpoint is returning 404 — it was supposed to remain live with a deprecation notice until Q3 but was removed early in the last deploy. v2 endpoint is unaffected. Some customers using v1 are broken.",
     "expected_category": "p2"
   },
   {
     "id": "p2009",
     "topic": "German locale showing dates in wrong format",
-    "input_email": "Users with German locale set are seeing dates in MM/DD/YYYY format instead of DD.MM.YYYY. Numbers and currency are formatted correctly. Affects all date fields across the app for ~800 DE users.",
+    "input_text": "Users with German locale set are seeing dates in MM/DD/YYYY format instead of DD.MM.YYYY. Numbers and currency are formatted correctly. Affects all date fields across the app for ~800 DE users.",
     "expected_category": "p2"
   },
   {
     "id": "p2010",
     "topic": "Invite emails going to spam for Gmail users",
-    "input_email": "Team invite emails are being flagged as spam by Gmail for roughly 70% of recipients. The SPF/DKIM records look correct but the sending IP may have been added to a blocklist. Non-Gmail providers unaffected.",
+    "input_text": "Team invite emails are being flagged as spam by Gmail for roughly 70% of recipients. The SPF/DKIM records look correct but the sending IP may have been added to a blocklist. Non-Gmail providers unaffected.",
     "expected_category": "p2"
   },
   {
     "id": "p2011",
     "topic": "Account deletion not canceling billing subscription",
-    "input_email": "When users delete their account, their data is being removed correctly but the Stripe subscription is not being canceled. Users are continuing to be charged after deletion. Billing team flagged 47 cases this week.",
+    "input_text": "When users delete their account, their data is being removed correctly but the Stripe subscription is not being canceled. Users are continuing to be charged after deletion. Billing team flagged 47 cases this week.",
     "expected_category": "p2"
   },
   {
     "id": "p2012",
     "topic": "Drag-and-drop reordering broken in Safari",
-    "input_email": "Drag-and-drop reordering of items in lists is not working in Safari (all versions). The drag starts but items snap back to their original position on drop. Chrome and Firefox are unaffected. Safari is 22% of our browser share.",
+    "input_text": "Drag-and-drop reordering of items in lists is not working in Safari (all versions). The drag starts but items snap back to their original position on drop. Chrome and Firefox are unaffected. Safari is 22% of our browser share.",
     "expected_category": "p2"
   },
   {
     "id": "p2013",
     "topic": "Search autocomplete showing stale results",
-    "input_email": "Search autocomplete suggestions are returning stale data — showing deleted items and old titles. A hard refresh fixes it temporarily. The autocomplete cache is not being invalidated on record updates.",
+    "input_text": "Search autocomplete suggestions are returning stale data — showing deleted items and old titles. A hard refresh fixes it temporarily. The autocomplete cache is not being invalidated on record updates.",
     "expected_category": "p2"
   },
   {
     "id": "p2014",
     "topic": "Mobile push notifications delayed 15-30 minutes",
-    "input_email": "iOS and Android push notifications are being delayed by 15-30 minutes instead of delivering in near real-time. The push queue is processing but with significant lag. Affects all mobile users.",
+    "input_text": "iOS and Android push notifications are being delayed by 15-30 minutes instead of delivering in near real-time. The push queue is processing but with significant lag. Affects all mobile users.",
     "expected_category": "p2"
   },
   {
     "id": "p2015",
     "topic": "Onboarding checklist showing wrong completion status",
-    "input_email": "Some onboarding checklist steps are showing as incomplete even after users have completed them. Affects steps 3 and 5 for accounts created in the last week. Completion state is being stored but the read query has a bug.",
+    "input_text": "Some onboarding checklist steps are showing as incomplete even after users have completed them. Affects steps 3 and 5 for accounts created in the last week. Completion state is being stored but the read query has a bug.",
     "expected_category": "p2"
   },
   {
     "id": "p3001",
     "topic": "Billing tooltip — wrong currency symbol for CAD users",
-    "input_email": "The price breakdown tooltip on the billing page shows a dollar sign ($) instead of (CA$) for Canadian users. The amounts themselves are correct — just the symbol is wrong.",
+    "input_text": "The price breakdown tooltip on the billing page shows a dollar sign ($) instead of (CA$) for Canadian users. The amounts themselves are correct — just the symbol is wrong.",
     "expected_category": "p3"
   },
   {
     "id": "p3002",
     "topic": "'Last seen' timestamp off by 1 hour after DST change",
-    "input_email": "User 'last seen' timestamps in the admin panel are off by exactly 1 hour since the daylight saving time change last weekend. Timestamps in emails and exports are correct — just the UI display is affected.",
+    "input_text": "User 'last seen' timestamps in the admin panel are off by exactly 1 hour since the daylight saving time change last weekend. Timestamps in emails and exports are correct — just the UI display is affected.",
     "expected_category": "p3"
   },
   {
     "id": "p3003",
     "topic": "Typo in error message — 'recieve'",
-    "input_email": "The error message displayed when an email verification link expires says 'You will recieve a new link shortly.' — 'recieve' should be 'receive'. Low visibility but embarrassing.",
+    "input_text": "The error message displayed when an email verification link expires says 'You will recieve a new link shortly.' — 'recieve' should be 'receive'. Low visibility but embarrassing.",
     "expected_category": "p3"
   },
   {
     "id": "p3004",
     "topic": "Avatar upload crops images slightly off-center",
-    "input_email": "Profile avatar images are being cropped slightly off-center — the crop circle is shifted about 8px to the right compared to the preview shown during upload. Noticed by a handful of users.",
+    "input_text": "Profile avatar images are being cropped slightly off-center — the crop circle is shifted about 8px to the right compared to the preview shown during upload. Noticed by a handful of users.",
     "expected_category": "p3"
   },
   {
     "id": "p3005",
     "topic": "Bold keyboard shortcut not working in Firefox",
-    "input_email": "Cmd+B / Ctrl+B shortcut for bold text in the rich text editor does not work in Firefox. The toolbar button works fine, and all other shortcuts (italic, underline) work. Chrome and Safari are unaffected.",
+    "input_text": "Cmd+B / Ctrl+B shortcut for bold text in the rich text editor does not work in Firefox. The toolbar button works fine, and all other shortcuts (italic, underline) work. Chrome and Safari are unaffected.",
     "expected_category": "p3"
   },
   {
     "id": "p3006",
     "topic": "Empty state illustration missing on Projects page in IE11",
-    "input_email": "The Projects page empty state is missing its illustration graphic in Internet Explorer 11. The text and CTA button render correctly. IE11 usage is <0.5% of our traffic.",
+    "input_text": "The Projects page empty state is missing its illustration graphic in Internet Explorer 11. The text and CTA button render correctly. IE11 usage is <0.5% of our traffic.",
     "expected_category": "p3"
   },
   {
     "id": "p3007",
     "topic": "Success toast disappears too quickly",
-    "input_email": "The success toast notification (e.g. 'Changes saved') disappears after 500ms, which is too fast for users to read. It should stay visible for 3000ms. A few support tickets have mentioned this.",
+    "input_text": "The success toast notification (e.g. 'Changes saved') disappears after 500ms, which is too fast for users to read. It should stay visible for 3000ms. A few support tickets have mentioned this.",
     "expected_category": "p3"
   },
   {
     "id": "p3008",
     "topic": "Hover state missing on secondary CTA buttons in email templates",
-    "input_email": "Secondary call-to-action buttons in our outbound email templates are missing their hover highlight in email clients that support CSS hover (Gmail web, Apple Mail). Primary buttons are fine.",
+    "input_text": "Secondary call-to-action buttons in our outbound email templates are missing their hover highlight in email clients that support CSS hover (Gmail web, Apple Mail). Primary buttons are fine.",
     "expected_category": "p3"
   },
   {
     "id": "p3009",
     "topic": "Terms of Service link opens in same tab",
-    "input_email": "The Terms of Service link in the signup footer opens in the same tab instead of a new tab. Users lose their signup progress. Easy fix — missing target=_blank on the anchor tag.",
+    "input_text": "The Terms of Service link in the signup footer opens in the same tab instead of a new tab. Users lose their signup progress. Easy fix — missing target=_blank on the anchor tag.",
     "expected_category": "p3"
   },
   {
     "id": "p3010",
     "topic": "Filter dropdown closes when cursor moves slightly outside",
-    "input_email": "The filter dropdown on the reports list page closes if the user moves their mouse even slightly outside the dropdown boundary. This makes it very difficult to use. Affects all browsers.",
+    "input_text": "The filter dropdown on the reports list page closes if the user moves their mouse even slightly outside the dropdown boundary. This makes it very difficult to use. Affects all browsers.",
     "expected_category": "p3"
   },
   {
     "id": "p3011",
     "topic": "Changelog modal shows duplicate entries after rapid refresh",
-    "input_email": "The in-app changelog modal shows duplicate entries when the user rapidly refreshes the page. Requires two quick refreshes to reproduce. The deduplication logic in the frontend state is missing a check.",
+    "input_text": "The in-app changelog modal shows duplicate entries when the user rapidly refreshes the page. Requires two quick refreshes to reproduce. The deduplication logic in the frontend state is missing a check.",
     "expected_category": "p3"
   }
 ]

@@ -12,7 +12,7 @@ Each file is a JSON array of case objects.
 |:--|:--|:--|
 | `id` | string | Stable unique identifier for the case (e.g. `b001`). Never reuse or reorder. |
 | `topic` | string | Human-readable label shown in the dashboard's per-case breakdown. |
-| `input_email` | string | The raw input passed to your LLM (rename mentally to match your task). |
+| `input_text` | string | The raw input passed to your LLM. |
 | `expected_category` | string | The ground-truth label. Must exactly match what your prompt outputs. |
 
 ### Full example
@@ -22,19 +22,19 @@ Each file is a JSON array of case objects.
   {
     "id": "b001",
     "topic": "Subscription renewal charge dispute",
-    "input_email": "I was charged twice for my subscription this month. Please refund the duplicate payment immediately.",
+    "input_text": "I was charged twice for my subscription this month. Please refund the duplicate payment immediately.",
     "expected_category": "billing"
   },
   {
     "id": "t001",
     "topic": "App crashes on login",
-    "input_email": "Every time I try to log in on iOS 17 the app crashes after the loading screen. I have tried reinstalling.",
+    "input_text": "Every time I try to log in on iOS 17 the app crashes after the loading screen. I have tried reinstalling.",
     "expected_category": "technical"
   },
   {
     "id": "a001",
     "topic": "Cannot reset password",
-    "input_email": "I forgot my password and the reset email never arrives, even after checking spam.",
+    "input_text": "I forgot my password and the reset email never arrives, even after checking spam.",
     "expected_category": "account"
   }
 ]
@@ -79,7 +79,7 @@ The `topic` field is purely descriptive — it does not affect scoring. The dash
 uv run lrd init
 ```
 
-The command prompts for a task name and category list, then writes a prompt YAML and a starter dataset with one placeholder case per category. Replace the placeholder `input_email` strings with real examples before running your first evaluation.
+The command prompts for a task name and category list, then writes a prompt YAML and a starter dataset with one placeholder case per category. Replace the placeholder `input_text` strings with real examples before running your first evaluation.
 
 ---
 

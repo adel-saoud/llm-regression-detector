@@ -31,7 +31,7 @@ def test_extract_json_object_returns_none_for_garbage() -> None:
 def test_parse_judge_response_falls_back_on_invalid_json() -> None:
     case = GoldenCase(
         id="x",
-        input_email="e",
+        input_text="e",
         expected_category=Category.P2,
         expected_summary_keywords=["k"],
         difficulty=Difficulty.EASY,

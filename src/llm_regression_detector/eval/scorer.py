@@ -129,7 +129,7 @@ def _build_messages(
         {
             "role": "user",
             "content": _USER_TEMPLATE.format(
-                email=case.input_email,
+                email=case.input_text,
                 expected_category=case.expected_category,
                 expected_keywords=", ".join(case.expected_summary_keywords) or "(none)",
                 predicted_category=predicted_category,

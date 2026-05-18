@@ -302,7 +302,7 @@ if not prompts:
     Create a JSON file at `golden_dataset/my_dataset.json`. Each case needs:
     - **`id`** — unique slug (e.g. `b001`)
     - **`topic`** — human label shown in the dashboard (e.g. `"Duplicate charge — refund"`)
-    - **`input_email`** — the text your LLM will receive
+    - **`input_text`** — the text your LLM will receive
     - **`expected_category`** — the correct answer your LLM should produce
 
     👉 See `docs/golden-dataset-guide.md` for the full schema and a worked example.

@@ -56,5 +56,7 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
-# Local tooling (personal, not for the repo)
-.claude/
+# Claude Code — keep project config and commands, exclude local session state
+.claude/settings.local.json
+.claude/worktrees/
+.claude/skills/

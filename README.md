@@ -20,7 +20,7 @@ LLM quality can degrade silently — a prompt tweak, a model swap, a fine-tune, 
 > **"Just over half of organizations (52.4%) report running offline evaluations on test sets, indicating that many teams see the importance of catching regressions and validating agent behavior before deployment."**
 > — LangChain, [State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering#:~:text=Just%20over%20half%20of%20organization%20(52.4%25)%20report%20running%20offline%20evaluations%20on%20test%20sets)
 
-> Inspired by the eval pipeline I built for DaiLY at Decathlon France — 25K users, 98% accuracy in production. This is that pattern, open-sourced.
+> Inspired by the eval pipeline I built for DaiLY at Decathlon France — 30,000+ users, rubric pass lifted from ~60% to 97.7% on the lead agent. This is that pattern, open-sourced.
 
 ![Demo: incident triage baseline 86.8% → degraded 56.6% → CRITICAL -30 pp regression detected](demo.gif)
 

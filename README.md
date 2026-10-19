@@ -1,7 +1,7 @@
 # LLM Regression Detector
 
-> Automated quality gate for LLM systems — catches regressions in CI before they reach users,
-> with statistical rigour that won't fire false alarms.
+> Automated quality gate for LLM systems: catches regressions in CI before they reach users,
+> with Wilson 95% confidence intervals to keep false alarms rare.
 
 [![CI](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/ci.yml)
 [![Eval](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/eval.yml/badge.svg)](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/eval.yml)
@@ -20,7 +20,7 @@ LLM quality can degrade silently — a prompt tweak, a model swap, a fine-tune, 
 > **"Just over half of organizations (52.4%) report running offline evaluations on test sets, indicating that many teams see the importance of catching regressions and validating agent behavior before deployment."**
 > — LangChain, [State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering#:~:text=Just%20over%20half%20of%20organization%20(52.4%25)%20report%20running%20offline%20evaluations%20on%20test%20sets)
 
-> Inspired by the eval pipeline I built for DaiLY at Decathlon France — 30,000+ users, rubric pass lifted from ~60% to 97.7% on the lead agent. This is that pattern, open-sourced.
+> **Why I built this.** On a production multi-agent assistant, every prompt change was a quality risk. A golden-set gate with confidence intervals turns that risk into a CI check.
 
 ![Demo: incident triage baseline 86.8% → degraded 56.6% → CRITICAL -30 pp regression detected](demo.gif)
 

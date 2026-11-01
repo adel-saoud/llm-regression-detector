@@ -11,52 +11,52 @@ from llm_regression_detector.llm.mock import MockLLMClient, classify_incident
 # ── classify_incident unit tests ────────────────────────────────────────────
 
 
-def testclassify_incident_p0_outage() -> None:
+def test_classify_incident_p0_outage() -> None:
     result = classify_incident("Payment service returning 500 on 100% of checkout attempts.")
     assert result.category == "p0"
     assert result.judge_score == 4
 
 
-def testclassify_incident_p0_data_breach() -> None:
+def test_classify_incident_p0_data_breach() -> None:
     result = classify_incident(
         "Security alert: data breach detected, active exfiltration in progress."
     )
     assert result.category == "p0"
 
 
-def testclassify_incident_p1_major_feature() -> None:
-    result = classify_incident("Mobile app crash on launch for many users — iOS 17+.")
+def test_classify_incident_p1_major_feature() -> None:
+    result = classify_incident("Mobile app crash on launch for many users: iOS 17+.")
     assert result.category == "p1"
     assert result.judge_score == 4
 
 
-def testclassify_incident_p1_sso() -> None:
-    result = classify_incident("Okta SSO integration broken — users cannot log in via SSO.")
+def test_classify_incident_p1_sso() -> None:
+    result = classify_incident("Okta SSO integration broken: users cannot log in via SSO.")
     assert result.category == "p1"
 
 
-def testclassify_incident_p2_partial() -> None:
+def test_classify_incident_p2_partial() -> None:
     result = classify_incident("CSV export fails for reports over 10k rows. Other exports work.")
     assert result.category == "p2"
 
 
-def testclassify_incident_p2_subset() -> None:
-    result = classify_incident("Dark mode toggle not persisting — only affects a subset of users.")
+def test_classify_incident_p2_subset() -> None:
+    result = classify_incident("Dark mode toggle not persisting: only affects a subset of users.")
     assert result.category == "p2"
 
 
-def testclassify_incident_p3_cosmetic() -> None:
+def test_classify_incident_p3_cosmetic() -> None:
     result = classify_incident("Tooltip on billing page shows wrong currency symbol for CAD users.")
     assert result.category == "p3"
     assert result.judge_score == 4
 
 
-def testclassify_incident_p3_typo() -> None:
+def test_classify_incident_p3_typo() -> None:
     result = classify_incident("Typo in error message: 'recieve' should be 'receive'.")
     assert result.category == "p3"
 
 
-def testclassify_incident_fallback_returns_p2() -> None:
+def test_classify_incident_fallback_returns_p2() -> None:
     """Truly ambiguous reports fall back to p2."""
     result = classify_incident("Something seems off with the system today.")
     assert result.category == "p2"
@@ -136,8 +136,8 @@ async def test_mock_incident_degraded_uses_p3() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mock_email_mode_not_affected() -> None:
-    """Original email classification is unaffected when system prompt has no p0/p1/p2/p3."""
+async def test_mock_support_mode_not_affected() -> None:
+    """Support-message classification applies when the system prompt has no p0 to p3."""
     client = MockLLMClient()
     msgs = [
         {

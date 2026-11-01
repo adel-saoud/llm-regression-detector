@@ -1,14 +1,15 @@
 """Deterministic in-process LLM stub for offline development and tests.
 
 The mock inspects the conversation, decides whether it looks like a classifier
-call or a judge call, and returns a stable JSON response in the matching shape.
-This lets the entire pipeline — runner, judge, diff, alerting — run end-to-end
+call, a free-text answer call or a judge call, and returns a stable JSON response
+in the matching shape.
+This lets the entire pipeline (runner, judge, diff, alerting) run end-to-end
 with no API keys and no network.
 
 When the prompt under test ships without few-shot examples, the mock simulates
-a weaker model by drifting ~25% of cases to ``"general"``. That asymmetry is
-what makes the self-eval demo (``v1`` vs ``v2-degraded``) detect a real
-regression even in offline mode.
+a weaker model by drifting about 40% of cases to a wrong default category
+(``p3`` for incident triage, ``general`` otherwise). That asymmetry is what makes
+the self-eval demo (``v1`` vs ``v2-degraded``) detect a real regression offline.
 """
 
 from __future__ import annotations
@@ -146,30 +147,36 @@ _INCIDENT_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
+_INCIDENT_SUMMARIES: dict[str, str] = {
+    "p0": "Complete outage, all users affected, immediate response required.",
+    "p1": "Major feature broken, significant user impact, page on-call.",
+    "p2": "Partial degradation, subset of users affected, same-day fix needed.",
+    "p3": "Minor issue, cosmetic or edge case, few users affected.",
+}
+
+
 def classify_incident(text: str) -> _MockClassification:
-    """Keyword-based severity classifier for incident triage prompts."""
+    """Severity of an incident report by keyword, checked from p0 down to p3.
+
+    Severest first, so a report that also mentions a cosmetic detail keeps its
+    outage severity. No match falls back to ``p2``, a middle severity, with a lower score.
+    """
     lowered = text.lower()
-    summaries: dict[str, str] = {
-        "p0": "Complete outage — all users affected, immediate response required.",
-        "p1": "Major feature broken — significant user impact, page on-call.",
-        "p2": "Partial degradation — subset of users affected, same-day fix needed.",
-        "p3": "Minor issue — cosmetic or edge case, few users affected.",
-    }
     for category, keywords in _INCIDENT_KEYWORDS.items():
-        if any(kw in lowered for kw in keywords):
+        if any(keyword in lowered for keyword in keywords):
             return _MockClassification(
                 category=category,
-                summary=summaries[category],
+                summary=_INCIDENT_SUMMARIES[category],
                 judge_score=4,
             )
     return _MockClassification(
         category="p2",
-        summary=summaries["p2"],
+        summary=_INCIDENT_SUMMARIES["p2"],
         judge_score=3,
     )
 
 
-_CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
+_SUPPORT_CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "billing": (
         "invoice",
         "charge",
@@ -272,16 +279,18 @@ _CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
 
 @dataclass(frozen=True, slots=True)
 class _MockClassification:
+    """What the mock answers for one input."""
+
     category: str
     summary: str
     judge_score: int
 
 
-def _classify(text: str) -> _MockClassification:
-    """First matching category wins — keyword order in ``_CATEGORY_KEYWORDS`` matters."""
+def _classify_support_message(text: str) -> _MockClassification:
+    """Customer-support category by keyword; the first match in dict order wins."""
     lowered = text.lower()
-    for category, keywords in _CATEGORY_KEYWORDS.items():
-        if any(kw in lowered for kw in keywords):
+    for category, keywords in _SUPPORT_CATEGORY_KEYWORDS.items():
+        if any(keyword in lowered for keyword in keywords):
             return _MockClassification(
                 category=category,
                 summary=f"Customer reports a {category} issue.",
@@ -311,6 +320,11 @@ class MockLLMClient:
         temperature: float = 0.0,
         max_tokens: int | None = None,
     ) -> LLMResponse:
+        """Answer as a judge, a free-text assistant or a classifier, based on the messages.
+
+        Incident mode is picked when the system prompt names ``p0`` to ``p3``.
+        Token counts use the rough 4 characters per token rule.
+        """
         user_msg = next(
             (m["content"] for m in reversed(messages) if m.get("role") == "user"),
             "",
@@ -319,50 +333,38 @@ class MockLLMClient:
         has_few_shots = any(m.get("role") == "assistant" for m in messages)
         system_msg = next((m["content"] for m in messages if m.get("role") == "system"), "")
         is_incident_mode = bool(re.search(r"\bp[0-3]\b", system_msg))
-        classification = classify_incident(user_msg) if is_incident_mode else _classify(user_msg)
+        classification = (
+            classify_incident(user_msg) if is_incident_mode else _classify_support_message(user_msg)
+        )
+        seed = _stable_seed(messages)
 
         if _looks_like_judge_prompt(full_context):
-            # Mock judge: parse expected vs predicted category from the user message
-            # and compute a real comparison. Judge quality is independent of the
-            # prompt under test, so this stays the same across v1/v2.
-            expected = _extract_field(user_msg, "Expected category")
-            predicted = _extract_field(user_msg, "Predicted category")
-            category_match = bool(expected and predicted and expected == predicted)
-            score = 4 if category_match else 1
-            content = json.dumps(
-                {
-                    "category_match": category_match,
-                    "summary_score": score,
-                    "rationale": f"Mock judge: expected={expected}, predicted={predicted}.",
-                }
-            )
+            content = _mock_judge(user_msg)
+        elif '"answer"' in system_msg:
+            content = _mock_answer(classification.summary, degraded=not has_few_shots)
         elif has_few_shots:
             content = json.dumps(
                 {"category": classification.category, "summary": classification.summary},
             )
+        # No few-shots: simulate a weaker prompt. The input hash picks which cases
+        # degrade, so the same case always degrades the same way.
+        elif seed % 5 < 2:  # 2 in 5 cases drift: significant at N=53
+            degraded_category = "p3" if is_incident_mode else "general"
+            degraded_summary = (
+                "Severity unclear: defaulting to p3."
+                if is_incident_mode
+                else "Customer message: unclear category."
+            )
+            content = json.dumps(
+                {"category": degraded_category, "summary": degraded_summary},
+            )
         else:
-            # No few-shots → simulate a weaker prompt: misclassify harder/adversarial
-            # cases. Deterministic via the input hash — same case always degrades the
-            # same way. This is what makes the self-eval demo show a real regression.
-            seed = _stable_seed(messages)
-            if seed % 5 < 2:  # ~40% of cases drift — cleanly significant at N=53
-                degraded_category = "p3" if is_incident_mode else "general"
-                degraded_summary = (
-                    "Severity unclear — defaulting to p3."
-                    if is_incident_mode
-                    else "Customer message — unclear category."
-                )
-                content = json.dumps(
-                    {"category": degraded_category, "summary": degraded_summary},
-                )
-            else:
-                content = json.dumps(
-                    {"category": classification.category, "summary": classification.summary},
-                )
+            content = json.dumps(
+                {"category": classification.category, "summary": classification.summary},
+            )
 
         prompt_tokens = max(1, len(user_msg) // 4)
         completion_tokens = max(1, len(content) // 4)
-        seed = _stable_seed(messages)
         latency_ms = 5.0 + (seed % 20)  # 5–25 ms, deterministic per input
 
         return LLMResponse(
@@ -375,15 +377,40 @@ class MockLLMClient:
 
 
 _JUDGE_MARKERS = re.compile(r"\b(judge|score|rate|evaluate|grading)\b", re.IGNORECASE)
+"""Words that appear in the judge prompt and not in the bundled prompts under test."""
 
 
 def _looks_like_judge_prompt(text: str) -> bool:
+    """True when the conversation is a judge call rather than the prompt under test."""
     return bool(_JUDGE_MARKERS.search(text))
 
 
-def _extract_field(text: str, label: str) -> str:
-    """Pull the value of a ``Label: value`` line from a free-form prompt."""
-    for line in text.splitlines():
-        if line.startswith(f"{label}:"):
-            return line.split(":", 1)[1].strip()
-    return ""
+_RUBRIC_COUNT = re.compile(r"^Rubric criteria \((\d+)\)", re.MULTILINE)
+_PREDICTED_ANSWER = "Predicted answer:"
+_UNSURE_MARKER = "unclear"
+
+
+def _mock_judge(user_msg: str) -> str:
+    """Grade the predicted answer by a fixed rule: empty or unsure answers fail.
+
+    Judge quality is independent of the prompt under test, so the same answer
+    always gets the same grade, and every rubric criterion follows that grade.
+    """
+    answer = user_msg.split(_PREDICTED_ANSWER, 1)[-1].strip()
+    good = bool(answer) and _UNSURE_MARKER not in answer.lower()
+    rubric_match = _RUBRIC_COUNT.search(user_msg)
+    criteria_count = int(rubric_match.group(1)) if rubric_match else 0
+    return json.dumps(
+        {
+            "summary_score": 4 if good else 1,
+            "rationale": "Mock judge: answer looks complete." if good else "Mock judge: unsure.",
+            "criteria": [{"passed": good, "rationale": ""} for _ in range(criteria_count)],
+        }
+    )
+
+
+def _mock_answer(summary: str, *, degraded: bool) -> str:
+    """Free-text reply for prompts that ask for an ``answer`` key."""
+    if degraded:
+        return json.dumps({"category": "CLARIFY", "answer": "The request is unclear to me."})
+    return json.dumps({"category": "ANSWER", "answer": f"Thanks for your message. {summary}"})

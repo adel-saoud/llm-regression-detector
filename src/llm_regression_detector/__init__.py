@@ -1,4 +1,4 @@
-"""LLM regression detector — catch quality drops in LLM systems before they reach users."""
+"""LLM regression detector: catch quality drops in LLM systems before they reach users."""
 
 from importlib.metadata import PackageNotFoundError, version
 

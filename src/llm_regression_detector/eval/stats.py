@@ -2,21 +2,25 @@
 
 Three things live here:
 
-1. **Wilson score interval** — 95% CI for a binary-pass-rate metric. Better than
+1. **Wilson score interval**: 95% CI for a binary-pass-rate metric. Better than
    the normal-approximation interval at small N, where eval datasets live.
-2. **Percentiles** — p50/p95/p99 latency from a sample list.
-3. **Slow drift** — does the latest accuracy fall below the moving-average
+2. **Percentiles**: p50/p95/p99 latency from a sample list.
+3. **Slow drift**: does the latest accuracy fall below the moving-average
    minus k·σ band of recent runs?
 
-These are intentionally tiny, dependency-free, and pure — easy to test, easy
-to reason about. ``scipy`` is overkill for this scale.
+They are pure and use the standard library only: ``scipy`` would add a heavy
+dependency for three formulas.
 """
 
 from __future__ import annotations
 
 import math
+import statistics
 from collections.abc import Sequence
 from dataclasses import dataclass
+
+MIN_DRIFT_HISTORY = 5
+"""Fewest past runs before slow drift is checked; below it the standard deviation is noise."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +33,7 @@ class WilsonInterval:
 
     @property
     def half_width(self) -> float:
+        """Margin of error around the point estimate, as a proportion."""
         return (self.high - self.low) / 2.0
 
 
@@ -53,7 +58,7 @@ def wilson_interval(passed: int, total: int, *, z: float = 1.96) -> WilsonInterv
 
 
 def intervals_overlap(a: WilsonInterval, b: WilsonInterval) -> bool:
-    """True iff two intervals share any point — ie. the difference is *not* significant."""
+    """True iff two intervals share any point: ie. the difference is *not* significant."""
     return not (a.high < b.low or b.high < a.low)
 
 
@@ -97,12 +102,12 @@ def detect_slow_drift(
     latest_accuracy: float,
     *,
     k_sigma: float = 2.0,
-    min_history: int = 5,
+    min_history: int = MIN_DRIFT_HISTORY,
 ) -> DriftSignal:
     """Flag drift when ``latest_accuracy`` falls below ``MA - k·σ`` of history.
 
     Skips detection (returns ``has_drift=False``) until at least ``min_history``
-    points exist — small samples have unreliable σ.
+    points exist: small samples have unreliable σ.
     """
     if len(historical_accuracies) < min_history:
         return DriftSignal(
@@ -112,15 +117,13 @@ def detect_slow_drift(
             threshold=0.0,
             latest=latest_accuracy,
         )
-    n = len(historical_accuracies)
-    ma = sum(historical_accuracies) / n
-    variance = sum((x - ma) ** 2 for x in historical_accuracies) / n
-    sigma = math.sqrt(variance)
-    threshold = ma - k_sigma * sigma
+    moving_average = statistics.fmean(historical_accuracies)
+    std_dev = statistics.pstdev(historical_accuracies, mu=moving_average)
+    threshold = moving_average - k_sigma * std_dev
     return DriftSignal(
         has_drift=latest_accuracy < threshold,
-        moving_average=ma,
-        std_dev=sigma,
+        moving_average=moving_average,
+        std_dev=std_dev,
         threshold=threshold,
         latest=latest_accuracy,
     )

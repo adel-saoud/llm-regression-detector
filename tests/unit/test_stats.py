@@ -1,4 +1,4 @@
-"""Tests for the statistical helpers — Wilson, percentiles, drift."""
+"""Tests for the statistical helpers: Wilson, percentiles, drift."""
 
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ def test_intervals_overlap_detection() -> None:
     a = wilson_interval(45, 50)  # ~0.83 - 0.97
     b = wilson_interval(40, 50)  # ~0.67 - 0.89
     c = wilson_interval(20, 50)  # ~0.30 - 0.55
-    assert intervals_overlap(a, b)  # close — overlap expected
-    assert not intervals_overlap(a, c)  # far apart — no overlap
+    assert intervals_overlap(a, b)  # close: overlap expected
+    assert not intervals_overlap(a, c)  # far apart: no overlap
 
 
 # ── Percentiles ─────────────────────────────────────────────────────────────

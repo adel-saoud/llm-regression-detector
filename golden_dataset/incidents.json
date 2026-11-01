@@ -1,80 +1,80 @@
 [
   {
     "id": "p0001",
-    "topic": "Payment service — complete checkout outage",
-    "input_text": "CRITICAL: Payment service returning 500 on 100% of checkout attempts for the last 6 minutes. All transactions failing. Revenue impact confirmed — ~$12k/min.",
+    "topic": "Payment service, complete checkout outage",
+    "input_text": "CRITICAL: Payment service returning 500 on 100% of checkout attempts for the last 6 minutes. All transactions failing. Revenue impact confirmed, ~$12k/min.",
     "expected_category": "p0"
   },
   {
     "id": "p0002",
-    "topic": "Database primary node failure — all writes down",
+    "topic": "Database primary node failure, all writes down",
     "input_text": "DB primary node has failed. All write operations returning connection timeout. Read replicas still serving reads but any mutation is failing. 100% of users affected for writes.",
     "expected_category": "p0"
   },
   {
     "id": "p0003",
-    "topic": "Auth service down — 100% login failure",
+    "topic": "Auth service down, 100% login failure",
     "input_text": "Auth service is returning 503 on all login attempts. No users can sign in. Existing sessions still valid but any new session creation fails. Started 4 minutes ago.",
     "expected_category": "p0"
   },
   {
     "id": "p0004",
-    "topic": "Active data breach — exfiltration detected",
+    "topic": "Active data breach, exfiltration detected",
     "input_text": "Security alert: anomalous outbound data transfer detected from prod DB replica. Pattern consistent with bulk exfiltration. Estimated 200k user records potentially exposed. Isolating now.",
     "expected_category": "p0"
   },
   {
     "id": "p0005",
-    "topic": "CDN down — entire app returning 502 globally",
+    "topic": "CDN down, entire app returning 502 globally",
     "input_text": "Our CDN provider is having an outage. All edge nodes returning 502. The entire app is unreachable from every region. Origin servers are healthy but traffic can't reach them.",
     "expected_category": "p0"
   },
   {
     "id": "p0006",
-    "topic": "API gateway down — all API calls failing",
+    "topic": "API gateway down, all API calls failing",
     "input_text": "API gateway is down. Every API endpoint returning 503. This affects our web app, mobile apps, and all third-party integrations simultaneously. Started 9 minutes ago.",
     "expected_category": "p0"
   },
   {
     "id": "p0007",
-    "topic": "SSL certificate expired — security warning for all users",
+    "topic": "SSL certificate expired, security warning for all users",
     "input_text": "SSL cert for app.company.com expired 12 minutes ago. All browsers showing security warning. Users cannot proceed past the warning without clicking through. Effectively a full outage.",
     "expected_category": "p0"
   },
   {
     "id": "p0008",
-    "topic": "Critical email queue stuck — 2h backlog",
+    "topic": "Critical email queue stuck, 2h backlog",
     "input_text": "Background job worker is stuck. Critical transactional emails (password resets, account verifications, purchase confirmations) have not been delivered for 2 hours. 8,400 emails queued.",
     "expected_category": "p0"
   },
   {
     "id": "p0009",
-    "topic": "Data deletion bug — user data being permanently deleted",
+    "topic": "Data deletion bug, user data being permanently deleted",
     "input_text": "BUG: account deletion job is running against the wrong query. It is deleting active user records, not just soft-deleted ones. Stopped the job but 340 active accounts affected. Data may be unrecoverable.",
     "expected_category": "p0"
   },
   {
     "id": "p0010",
-    "topic": "Deploy corrupted sessions — all users logged out",
+    "topic": "Deploy corrupted sessions, all users logged out",
     "input_text": "The 14:30 deploy rotated the session secret key incorrectly. All active user sessions have been invalidated. Every logged-in user has been signed out globally. Rolling back now.",
     "expected_category": "p0"
   },
   {
     "id": "p0011",
-    "topic": "DNS misconfiguration — primary domain not resolving",
+    "topic": "DNS misconfiguration, primary domain not resolving",
     "input_text": "Primary domain app.company.com is returning NXDOMAIN. DNS change pushed 18 minutes ago has a typo in the A record. App is completely unreachable. Revert in progress.",
     "expected_category": "p0"
   },
   {
     "id": "p0012",
-    "topic": "Real-time collaboration — data corruption and overwrites",
+    "topic": "Real-time collaboration, data corruption and overwrites",
     "input_text": "Multiple customers reporting that collaborative edits are overwriting each other's work and corrupting document state. Data loss confirmed in at least 15 documents across 6 enterprise accounts. Disabling the feature now.",
     "expected_category": "p0"
   },
   {
     "id": "p1001",
     "topic": "Checkout broken for saved payment methods",
-    "input_text": "Users with saved cards cannot complete checkout — getting a generic payment error on the final step. Users who enter a new card manually are not affected. Impacts ~60% of our returning customers.",
+    "input_text": "Users with saved cards cannot complete checkout, getting a generic payment error on the final step. Users who enter a new card manually are not affected. Impacts ~60% of our returning customers.",
     "expected_category": "p1"
   },
   {
@@ -85,7 +85,7 @@
   },
   {
     "id": "p1003",
-    "topic": "Mobile app crashing on launch — iOS 17+",
+    "topic": "Mobile app crashing on launch, iOS 17+",
     "input_text": "iOS app crashing on launch for all iOS 17+ users. Started after App Store release 3.4.1 went live. Crash in the new onboarding module. ~40% of our mobile DAU on iOS 17.",
     "expected_category": "p1"
   },
@@ -97,13 +97,13 @@
   },
   {
     "id": "p1005",
-    "topic": "Webhook delivery failing — all enterprise customers",
+    "topic": "Webhook delivery failing, all enterprise customers",
     "input_text": "Webhook delivery has been failing for all enterprise customers since 08:00 UTC. Events are queuing up but none are being delivered. Our enterprise SLA requires <5min delivery. 4 hours of backlog now.",
     "expected_category": "p1"
   },
   {
     "id": "p1006",
-    "topic": "2FA SMS not delivering — users locked out",
+    "topic": "2FA SMS not delivering, users locked out",
     "input_text": "SMS 2FA codes not being delivered. Our SMS provider is returning success but codes are not arriving. Users who require 2FA to log in are completely locked out. Affects ~30% of our user base.",
     "expected_category": "p1"
   },
@@ -116,31 +116,31 @@
   {
     "id": "p1008",
     "topic": "File upload failing for files over 1MB",
-    "input_text": "File uploads failing for any file over 1MB. Under 1MB uploads fine. Error is a 413 from the new nginx config — the client_max_body_size was accidentally set to 1M instead of 100M.",
+    "input_text": "File uploads failing for any file over 1MB. Under 1MB uploads fine. Error is a 413 from the new nginx config, the client_max_body_size was accidentally set to 1M instead of 100M.",
     "expected_category": "p1"
   },
   {
     "id": "p1009",
     "topic": "Email notifications not sent for 4 hours",
-    "input_text": "Email notification worker has been silently failing for 4 hours — no errors surfaced, just no emails going out. 22,000 notifications in the backlog. Affects all users who rely on email for alerts.",
+    "input_text": "Email notification worker has been silently failing for 4 hours, no errors surfaced, just no emails going out. 22,000 notifications in the backlog. Affects all users who rely on email for alerts.",
     "expected_category": "p1"
   },
   {
     "id": "p1010",
-    "topic": "API rate limiting misfiring — blocking at 10% of normal limit",
+    "topic": "API rate limiting misfiring, blocking at 10% of normal limit",
     "input_text": "Rate limiter is triggering at 10% of the configured threshold due to a Redis key prefix collision after the namespace migration. Legitimate API traffic is being 429'd across all customers.",
     "expected_category": "p1"
   },
   {
     "id": "p1011",
     "topic": "Okta SSO integration broken",
-    "input_text": "Okta SAML integration is broken — users trying to log in via SSO are getting a SAML assertion error. All enterprise customers using Okta cannot access the app. Certificate may have rotated.",
+    "input_text": "Okta SAML integration is broken, users trying to log in via SSO are getting a SAML assertion error. All enterprise customers using Okta cannot access the app. Certificate may have rotated.",
     "expected_category": "p1"
   },
   {
     "id": "p1012",
     "topic": "Billing invoices generating with wrong amounts",
-    "input_text": "Billing invoices generated this morning have incorrect amounts — appears to be an off-by-100 error (amounts in cents displayed as dollars). ~1,200 invoices sent to customers with wrong totals.",
+    "input_text": "Billing invoices generated this morning have incorrect amounts, appears to be an off-by-100 error (amounts in cents displayed as dollars). ~1,200 invoices sent to customers with wrong totals.",
     "expected_category": "p1"
   },
   {
@@ -152,13 +152,13 @@
   {
     "id": "p1014",
     "topic": "Video playback failing on Firefox",
-    "input_text": "Video playback is completely broken on Firefox — all versions. Videos show a black screen with no error message. Chrome, Safari, and Edge are unaffected. Firefox accounts for 18% of our web traffic.",
+    "input_text": "Video playback is completely broken on Firefox, all versions. Videos show a black screen with no error message. Chrome, Safari, and Edge are unaffected. Firefox accounts for 18% of our web traffic.",
     "expected_category": "p1"
   },
   {
     "id": "p1015",
     "topic": "New accounts unable to complete onboarding",
-    "input_text": "Newly created accounts are stuck on the last onboarding step — the workspace setup call is returning 422 due to a validation regression in the API. No new customer can become active. Affects all signups since 09:00.",
+    "input_text": "Newly created accounts are stuck on the last onboarding step, the workspace setup call is returning 422 due to a validation regression in the API. No new customer can become active. Affects all signups since 09:00.",
     "expected_category": "p1"
   },
   {
@@ -170,7 +170,7 @@
   {
     "id": "p2002",
     "topic": "PDF reports missing charts",
-    "input_text": "PDF exports of reports are missing all chart visualizations — the data tables are present but chart sections are blank. HTML reports and CSV exports are unaffected. Issue started after last week's Puppeteer upgrade.",
+    "input_text": "PDF exports of reports are missing all chart visualizations, the data tables are present but chart sections are blank. HTML reports and CSV exports are unaffected. Issue started after last week's Puppeteer upgrade.",
     "expected_category": "p2"
   },
   {
@@ -187,7 +187,7 @@
   },
   {
     "id": "p2005",
-    "topic": "Audit log pagination broken — only page 1 loads",
+    "topic": "Audit log pagination broken, only page 1 loads",
     "input_text": "Clicking to page 2+ on the audit log returns an empty result set. Page 1 loads correctly. Offset calculation in the audit log query is using the wrong parameter name after a recent refactor.",
     "expected_category": "p2"
   },
@@ -206,7 +206,7 @@
   {
     "id": "p2008",
     "topic": "Deprecated API v1 endpoint returning 404",
-    "input_text": "The /api/v1/users endpoint is returning 404 — it was supposed to remain live with a deprecation notice until Q3 but was removed early in the last deploy. v2 endpoint is unaffected. Some customers using v1 are broken.",
+    "input_text": "The /api/v1/users endpoint is returning 404, it was supposed to remain live with a deprecation notice until Q3 but was removed early in the last deploy. v2 endpoint is unaffected. Some customers using v1 are broken.",
     "expected_category": "p2"
   },
   {
@@ -236,7 +236,7 @@
   {
     "id": "p2013",
     "topic": "Search autocomplete showing stale results",
-    "input_text": "Search autocomplete suggestions are returning stale data — showing deleted items and old titles. A hard refresh fixes it temporarily. The autocomplete cache is not being invalidated on record updates.",
+    "input_text": "Search autocomplete suggestions are returning stale data, showing deleted items and old titles. A hard refresh fixes it temporarily. The autocomplete cache is not being invalidated on record updates.",
     "expected_category": "p2"
   },
   {
@@ -253,26 +253,26 @@
   },
   {
     "id": "p3001",
-    "topic": "Billing tooltip — wrong currency symbol for CAD users",
-    "input_text": "The price breakdown tooltip on the billing page shows a dollar sign ($) instead of (CA$) for Canadian users. The amounts themselves are correct — just the symbol is wrong.",
+    "topic": "Billing tooltip, wrong currency symbol for CAD users",
+    "input_text": "The price breakdown tooltip on the billing page shows a dollar sign ($) instead of (CA$) for Canadian users. The amounts themselves are correct, just the symbol is wrong.",
     "expected_category": "p3"
   },
   {
     "id": "p3002",
     "topic": "'Last seen' timestamp off by 1 hour after DST change",
-    "input_text": "User 'last seen' timestamps in the admin panel are off by exactly 1 hour since the daylight saving time change last weekend. Timestamps in emails and exports are correct — just the UI display is affected.",
+    "input_text": "User 'last seen' timestamps in the admin panel are off by exactly 1 hour since the daylight saving time change last weekend. Timestamps in emails and exports are correct, just the UI display is affected.",
     "expected_category": "p3"
   },
   {
     "id": "p3003",
-    "topic": "Typo in error message — 'recieve'",
-    "input_text": "The error message displayed when an email verification link expires says 'You will recieve a new link shortly.' — 'recieve' should be 'receive'. Low visibility but embarrassing.",
+    "topic": "Typo in error message, 'recieve'",
+    "input_text": "The error message displayed when an email verification link expires says 'You will recieve a new link shortly.', 'recieve' should be 'receive'. Low visibility but embarrassing.",
     "expected_category": "p3"
   },
   {
     "id": "p3004",
     "topic": "Avatar upload crops images slightly off-center",
-    "input_text": "Profile avatar images are being cropped slightly off-center — the crop circle is shifted about 8px to the right compared to the preview shown during upload. Noticed by a handful of users.",
+    "input_text": "Profile avatar images are being cropped slightly off-center, the crop circle is shifted about 8px to the right compared to the preview shown during upload. Noticed by a handful of users.",
     "expected_category": "p3"
   },
   {
@@ -302,7 +302,7 @@
   {
     "id": "p3009",
     "topic": "Terms of Service link opens in same tab",
-    "input_text": "The Terms of Service link in the signup footer opens in the same tab instead of a new tab. Users lose their signup progress. Easy fix — missing target=_blank on the anchor tag.",
+    "input_text": "The Terms of Service link in the signup footer opens in the same tab instead of a new tab. Users lose their signup progress. Easy fix, missing target=_blank on the anchor tag.",
     "expected_category": "p3"
   },
   {

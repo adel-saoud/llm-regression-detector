@@ -5,7 +5,7 @@
 # Proves the regression detector catches a real quality drop:
 #   1. Run the baseline prompt (v1, with few-shot examples)
 #   2. Run the deliberately degraded prompt (v2, no few-shots, weaker spec)
-#   3. Diff them — expect a drop and an alert-worthy severity
+#   3. Diff them: expect a drop and an alert-worthy severity
 #
 # Works with $0 setup:
 #   - if HF_TOKEN / GEMINI_API_KEY is set, uses real free-tier models
@@ -33,7 +33,7 @@ echo "▶ Step 2: candidate (v2, deliberately degraded)"
 # at the end. CI relies on that signal to gate merges.
 set +e
 uv run lrd run \
-    --prompt prompts/incident_triage_v2_degraded.yaml \
+    --prompt prompts/demo/incident_triage_v2_degraded.yaml \
     --dataset "$DATASET" \
     --db "$DB" \
     --report evals/report_v2.html \

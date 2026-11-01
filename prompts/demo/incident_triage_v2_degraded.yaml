@@ -1,7 +1,8 @@
 name: incident-triage
 version: v2-degraded
+dataset: ../../golden_dataset/incidents.json
 description: |
-  Degraded prompt — severity definitions are vague and conflated to simulate
+  Degraded prompt: severity definitions are vague and conflated to simulate
   a regression. Used for the demo: run v1 as baseline then v2 to see CRITICAL.
 
 system: |
@@ -11,6 +12,6 @@ system: |
 few_shots: []
 
 user_template: |
-  Incident report: {email}
+  Incident report: {input_text}
 
   Output JSON only.

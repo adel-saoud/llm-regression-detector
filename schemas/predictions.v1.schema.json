@@ -1,0 +1,85 @@
+{
+  "$id": "https://raw.githubusercontent.com/adel-saoud/llm-regression-detector/main/schemas/predictions.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One line of a predictions JSONL file: an answer the system under test already produced.\n\nUsed by offline scoring (``lrd score``) when the system is an agent or service\nthat generates its own answers, so there is no prompt to re-run. Keys mirror the\nJSON output keys of a prompt (``category``, ``summary``, ``answer``).",
+  "properties": {
+    "id": {
+      "description": "Id of the golden case this prediction answers.",
+      "title": "Id",
+      "type": "string"
+    },
+    "category": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Category"
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Summary"
+    },
+    "answer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Answer"
+    },
+    "latency_ms": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Latency Ms",
+      "type": "number"
+    },
+    "prompt_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Prompt Tokens",
+      "type": "integer"
+    },
+    "completion_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Completion Tokens",
+      "type": "integer"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Set when the system failed on this case; the case fails.",
+      "title": "Error"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "Prediction v1",
+  "type": "object"
+}

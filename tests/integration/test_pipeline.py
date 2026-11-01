@@ -52,8 +52,33 @@ async def test_diff_detects_changes_between_two_runs() -> None:
     run_b = await runner.run(prompt=prompt, cases=cases[:15])
 
     diff = Analyzer().diff(run_a, run_b)
-    # Mock is deterministic — same input → same output → no regressions
+    # Mock is deterministic: same input → same output → no regressions
     assert diff.regressions == []
     assert diff.improvements == []
     payload = to_alert_payload(diff)
     assert payload.run_id == run_b.run_id
+
+
+@pytest.mark.integration
+async def test_free_text_v2_pipeline_runs_end_to_end(tmp_path: Path) -> None:
+    cases = load_dataset(REPO_ROOT / "golden_dataset" / "store_support_answers.json")
+    prompt = load_prompt(REPO_ROOT / "prompts" / "store_support_v1.yaml")
+
+    client = MockLLMClient()
+    run = await Runner(client=client, judge=Judge(client), concurrency=4).run(
+        prompt=prompt, cases=cases
+    )
+
+    assert all(r.error is None for r in run.results)
+    by_id = {r.case_id: r for r in run.results}
+    assert len(by_id["ret001"].judge.criteria) == 3
+    assert by_id["ret001"].predicted_answer
+    assert by_id["prd001"].judge.category_match is None
+    assert "uncategorized" in {c.category for c in run.summary.per_category}
+
+    storage = SQLiteStorage(tmp_path / "runs.db")
+    await storage.initialize()
+    await storage.save(run)
+    loaded = await storage.get(run.run_id)
+    assert loaded is not None
+    assert loaded.results == run.results

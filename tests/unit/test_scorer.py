@@ -1,11 +1,8 @@
-# pyright: reportPrivateUsage=false
 from __future__ import annotations
 
 import pytest
 
-from llm_regression_detector.eval.dataset import Category, Difficulty, GoldenCase
 from llm_regression_detector.eval.parsing import extract_json_object
-from llm_regression_detector.eval.scorer import _parse_judge_response
 
 
 @pytest.mark.parametrize(
@@ -26,16 +23,3 @@ def test_extract_json_object_returns_none_for_garbage() -> None:
     assert extract_json_object("") is None
     assert extract_json_object("no json here") is None
     assert extract_json_object("[1, 2, 3]") is None  # array not object
-
-
-def test_parse_judge_response_falls_back_on_invalid_json() -> None:
-    case = GoldenCase(
-        id="x",
-        input_text="e",
-        expected_category=Category.P2,
-        expected_summary_keywords=["k"],
-        difficulty=Difficulty.EASY,
-    )
-    score = _parse_judge_response("not json at all", "p2", case)
-    assert score.category_match is True  # predicted matches expected
-    assert score.summary_score == 1  # safe default

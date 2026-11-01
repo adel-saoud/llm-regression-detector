@@ -1,213 +1,116 @@
-# LLM Regression Detector
+# llm-regression-detector
 
-> Automated quality gate for LLM systems: catches regressions in CI before they reach users,
-> with Wilson 95% confidence intervals to keep false alarms rare.
+A CI quality gate for teams that ship prompts and agents: it scores every change against a labelled test set and blocks the merge only when the drop is statistically real.
 
 [![CI](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/ci.yml)
-[![Eval](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/eval.yml/badge.svg)](https://github.com/adel-saoud/llm-regression-detector/actions/workflows/eval.yml)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Pyright](https://img.shields.io/badge/types-pyright%20strict-1f5fff)](https://github.com/microsoft/pyright)
-[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
----
+![Demo: incident triage baseline 86.8%, degraded prompt 56.6%, CRITICAL -30 pp regression detected](docs/demo.gif)
 
-LLM quality can degrade silently — a prompt tweak, a model swap, a fine-tune, or just gradual drift over time. Any of it can break production before anyone notices.
+## Why
 
-**This project catches those drops automatically.** It runs your LLM system against a labelled test set, diffs accuracy using Wilson 95% confidence intervals, and blocks the merge if the drop is real — not just noise from a small dataset.
+A prompt tweak, a model swap or slow drift can break an LLM feature without a single test failing.
+Comparing two accuracy percentages is not enough: on a 50-case test set, a drop under 20 points cannot be told apart from noise.
+This tool runs the test set on every change and only fails the build when the 95% confidence intervals stop overlapping.
 
-> **"Just over half of organizations (52.4%) report running offline evaluations on test sets, indicating that many teams see the importance of catching regressions and validating agent behavior before deployment."**
-> — LangChain, [State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering#:~:text=Just%20over%20half%20of%20organization%20(52.4%25)%20report%20running%20offline%20evaluations%20on%20test%20sets)
+## Try it
 
-> **Why I built this.** On a production multi-agent assistant, every prompt change was a quality risk. A golden-set gate with confidence intervals turns that risk into a CI check.
-
-![Demo: incident triage baseline 86.8% → degraded 56.6% → CRITICAL -30 pp regression detected](demo.gif)
-
----
-
-## Try it — no API key needed
+No API key, under a minute, on the bundled mock model:
 
 ```bash
 git clone https://github.com/adel-saoud/llm-regression-detector
 cd llm-regression-detector
-uv sync --all-extras
+uv sync
 
-# Step 1 — establish a baseline
+# 1. Record a baseline
 uv run lrd run -p prompts/incident_triage_v1.yaml --no-diff --no-notify
 
-# Step 2 — run a degraded candidate and watch it fire
-uv run lrd run -p prompts/incident_triage_v2_degraded.yaml --no-notify
+# 2. Run a deliberately degraded prompt and diff it against the baseline
+uv run lrd run -p prompts/demo/incident_triage_v2_degraded.yaml --no-notify
 ```
 
-Expected output:
+The second command prints `CRITICAL · accuracy -30.19 pp significant` and exits with code 2, which is what fails a CI job.
 
-```
-  Accuracy   86.8%  (95% CI 75.2–93.5%)   ← baseline
-  p0   100.0%   p1    66.7%   p2    93.3%   p3    90.9%
+On a real model with no key, install [Ollama](https://ollama.com), run `ollama pull qwen3.5:0.8b` and `ollama pull qwen3.5:4b`, and set `LRD_CUSTOM_MODEL=ollama/qwen3.5:0.8b`; the 4b model is the default judge. On a hosted model, put a free Hugging Face token in `.env` (`cp .env.example .env`, then set `HF_TOKEN`) or point `LRD_CUSTOM_MODEL` at any litellm provider, and set `LRD_JUDGE_MODEL` to a different model. See [docs/configuration.md](docs/configuration.md).
 
-  Accuracy   56.6%  (95% CI 43.3–69.0%)   ← candidate
-  p0    58.3%   p1    33.3%   p2    53.3%   p3    90.9%
+On your own task:
 
-CRITICAL · accuracy -30.19 pp significant · regressions=16 · improvements=0
-```
-
-The CIs don't overlap → `CRITICAL · significant`. P0 dropped from 100% to 58%, P1 from 67% to 33% — P3 held steady, masking the collapse in the aggregate. That's exactly the failure mode the per-category breakdown is designed to catch.
-
-> Numbers come from the deterministic mock (no key required). Real models produce the same shape; exact values vary — which is why the system reports statistical significance rather than raw deltas.
-
-**With a real model** — get a free token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens):
-
-```bash
-cp .env.example .env   # set HF_TOKEN=hf_...
-uv run lrd run -p prompts/incident_triage_v1.yaml --report evals/report.html
-uv run lrd dashboard   # Streamlit UI at localhost:8501
-```
-
-![Dashboard — incident triage evaluation: 56.6% accuracy, -30.2 pp CRITICAL regression, per-category breakdown and full case-level diff with no horizontal scrolling](docs/dashboard.png)
-
-## Use it with your own LLM
-
-The incident triage example is a stand-in — the detector works with any LLM task that produces structured output.
-
-**Scaffold a new evaluation in 60 seconds:**
-
-```bash
-uv run lrd init
-```
-
-The command prompts for a task name and categories, then writes a prompt YAML and a starter golden dataset. Fill in real examples, run `lrd run`, and you're evaluating.
-
-**Or build manually** — see [`docs/golden-dataset-guide.md`](docs/golden-dataset-guide.md) for the full dataset schema and advice on how many cases you need.
-
----
+- `uv run lrd init` writes a starter prompt YAML and golden dataset.
+- Free-text answers are scored too: a case can carry a `reference_answer` and a `rubric` of pass or fail criteria. See [docs/golden-dataset-guide.md](docs/golden-dataset-guide.md).
+- To score an agent instead of a prompt, export its answers to a predictions JSONL file and run `uv run lrd score --dataset X --predictions Y`. Same judge, diff and exit codes, no prompt re-run.
 
 ## How it works
 
-On every pull request:
-
 ```mermaid
 flowchart LR
-    A([LLM change]) --> B[Run against\ngolden test set]
-    B --> C[Score with\nLLM-as-Judge]
-    C --> D[Diff vs baseline\nWilson 95% CI]
-    D --> E{Significant\ndrop?}
-    E -- Yes --> F[🚨 Block merge\nAlert team]
-    E -- No --> G[✅ Pass]
-
-    style A fill:#1f2937,stroke:#374151,color:#f9fafb
-    style F fill:#450a0a,stroke:#991b1b,color:#fca5a5
-    style G fill:#052e16,stroke:#166534,color:#86efac
+    A([Prompt or dataset change]) --> B[Run the golden set]
+    B --> C[Score: exact category match,<br/>LLM judge for free text]
+    C --> D[Diff vs stored baseline<br/>Wilson 95% CI]
+    D --> E{CIs overlap?}
+    E -- no --> F[CRITICAL: exit 2,<br/>PR comment, webhook alert]
+    E -- yes --> G[INFO or WARNING]
 ```
 
-The included `eval.yml` triggers on changes to `prompts/` or `golden_dataset/` — but `lrd run` is a plain CLI command and can be wired into any CI system or run locally. The diff is computed against the latest stored baseline and the result is posted back as a sticky PR comment.
+1. Each prompt YAML names its dataset. On a pull request, [`eval.yml`](.github/workflows/eval.yml) evaluates every affected prompt: the prompts that changed, and the prompts whose dataset changed.
+2. Category labels are checked in code. A separate judge model, never the model under test, rates free-text answers from 1 to 5 and returns a pass or fail per rubric criterion; `LRD_JUDGE_CONSENSUS_N=3` takes the median and a majority vote.
+3. The run is diffed against the latest stored run of the same prompt. Only a drop or a flipped case raises the severity. A drop is CRITICAL only when the Wilson intervals do not overlap; otherwise it is downgraded to WARNING. A large gain stays INFO but is flagged: a jump that size is worth checking for a broken judge or dataset before trusting it.
+4. Every report breaks accuracy down per category, because an aggregate can hide one category collapsing. A separate slow-drift check compares the latest run with a moving-average band over recent runs.
+5. Results go to an HTML report, a sticky PR comment, and Slack, Google Chat, Discord or any webhook.
 
----
+`lrd dashboard` opens the run history in Streamlit:
 
-## Why not just compare percentages?
+![Dashboard on the mock model: accuracy history with its confidence band, a CRITICAL -30.2 pp comparison and the per-category breakdown](docs/dashboard.png)
 
-A raw accuracy diff misfires in several common ways. Here's how each is handled:
+Module map and failure handling: [docs/architecture.md](docs/architecture.md). Folder layout and stack: [docs/project-structure.md](docs/project-structure.md).
 
-| Problem | Approach |
-|:--|:--|
-| **Raw % comparisons are noise on small datasets** | Wilson 95% confidence intervals. If the CIs overlap, the delta is within noise — severity is downgraded automatically. No false alarms. |
-| **Aggregate accuracy hides category collapses** | Per-category breakdown in every report. An 80% aggregate can hide a 40-point drop in one category. |
-| **Gradual drift is invisible to PR-level diffs** | Slow-drift detector using `MA − k·σ` over recent run history. Catches what one-shot diffs miss. |
-| **LLM judge calls are noisy** | Optional majority vote (`LRD_JUDGE_CONSENSUS_N=3`): 3 judge calls per case, winner takes all. Configurable cost/quality tradeoff. |
-| **Webhook delivery fails silently** | `tenacity` with exponential backoff + jitter. Every platform (Slack, Discord, Google Chat) uses the same retry policy. |
-| **Hard-coded model = vendor lock-in** | `litellm` Router — every model ID lives in `Settings`. Swap providers with one env var, zero code changes. |
+## Results
 
----
+Every number below is regenerated by `uv run python scripts/reproduce.py` (local Ollama, no API key) and recorded, with the Ollama version, model digests, dataset and prompt hashes, package versions and sample sizes, in [`results/manifest.json`](results/manifest.json). The model under test is `qwen3.5:0.8b`, graded by a separate judge, `qwen3.5:4b`, both with thinking off, on the 53 hand-labelled cases in [`golden_dataset/incidents.json`](golden_dataset/incidents.json). Each prompt runs over 3 runs: cells are medians, and accuracy also shows the range.
 
-## Configuration
+| Run | Accuracy, median (range) | p0 | p1 | p2 | p3 | Judge score (1 to 5) |
+|---|---|---|---|---|---|---|
+| Baseline (`incident_triage_v1`) | 37.7% (37.7% to 37.7%) | 25.0% | 26.7% | 46.7% | 54.5% | 3.94 |
+| Degraded (`incident_triage_v2_degraded`) | 20.8% (20.8% to 20.8%) | 0.0% | 53.3% | 20.0% | 0.0% | 4.89 |
 
-The project runs at **$0** by default. Set `LRD_CUSTOM_MODEL` to bring your own provider:
+Verdict per run: WARNING in 3 of 3, accuracy delta -16.98 to -16.98 pp, 14 cases regressed and 5 improved (medians).
 
-```mermaid
-flowchart LR
-    R[litellm Router] -->|tier 0 — if set| C[LRD_CUSTOM_MODEL\nany litellm provider]
-    R -->|tier 1| HF[HF Inference Providers\nfree tier]
-    R -.->|fallback| G[Gemini 2.0 Flash\nfree tier]
-    R -.->|fallback| O[Ollama\nfully local]
-    R -.->|no credentials| M[Deterministic mock\noffline · tests]
+The degraded prompt costs 17 points of accuracy, and p0, the category that pages someone, falls to 0%. With 53 cases and a baseline this low the Wilson intervals still overlap, so the detector reports WARNING and lets a human decide rather than failing the build: the small-sample guard working as designed. The judge score moves the other way: it grades the summary text, and the 4b judge rates the degraded prompt's summaries higher. A case passes only with the right category and a judge score of at least 3, so the judge is part of the gate; a judge that is lenient on summaries leaves the category check to catch the regression.
 
-    style C fill:#052e16,stroke:#166534,color:#86efac
-    style M fill:#1e1b4b,stroke:#4338ca,color:#c7d2fe
-```
+## Design decisions
 
-`LRD_CUSTOM_MODEL` accepts any [litellm model string](https://docs.litellm.ai/docs/providers) — Anthropic, OpenAI, Vertex AI, GitHub Copilot, and 100+ others. `ollama/` models are auto-detected as local. No credit card required for the default chain.
+- [Gate on Wilson interval separation, not on a raw accuracy delta](docs/adr/0001-gate-on-wilson-interval-separation.md): why 53 cases report a 17-point drop as WARNING.
+- [A separate judge model that can never be the model under test](docs/adr/0003-separate-judge-model.md): self-preference bias, and why the judge has no fallback.
+- [A versioned dataset contract](docs/adr/0005-versioned-dataset-schema-contract.md): the JSON Schema other repos validate against, and how it may change.
 
----
+All decisions: [docs/adr/README.md](docs/adr/README.md).
 
-## Project structure
+## Limits
 
-```
-src/llm_regression_detector/
-├── config.py          Settings — all config is env-driven, never hardcoded
-├── llm/               LLM client — litellm Router + deterministic mock
-├── eval/              Runner · LLM-as-Judge · Wilson CI · percentiles · drift
-├── diff/              Regression detector — CI-aware severity logic
-├── notify/            Slack · Google Chat · Discord · generic — shared retry policy
-├── storage/           SQLite run history — schema-versioned, forward-migrated
-├── report/            HTML report (Jinja2) + GitHub PR comment
-├── dashboard/         Streamlit dashboard — KPI cards, accuracy history, version comparison
-└── cli.py             lrd run · lrd diff · lrd report · lrd pr-comment · lrd dashboard · lrd init
+- 53 cases catch large regressions only: at 50 cases the intervals separate at a 20 to 26 point drop. A 5-point drop needs about 430 cases at a 95% baseline and 870 at 85% (the `sensitivity` section of [`results/manifest.json`](results/manifest.json), table in [docs/golden-dataset-guide.md](docs/golden-dataset-guide.md#how-many-cases-do-you-need)).
+- Ollama output is not bit-stable across calls, even at temperature 0: requests batched with other clients change the arithmetic. Repeats inside one `reproduce.py` call matched exactly, but three calls on 24 October 2026 with the same `lrd` code (before the judge parsing fix) gave baselines of 41.5%, 37.7% and 34.0%, and verdicts CRITICAL at -26.42 pp, WARNING at -22.64 pp and WARNING at -18.87 pp. Those calls are not in the manifest. Treat a verdict near the CRITICAL boundary as provisional and rerun it.
+- The Wilson interval covers pass or fail. The 1 to 5 summary score has no interval yet; a bootstrap CI would fix that and is not built.
+- Majority vote reduces judge noise, but it repeats the same model, so it cannot correct that model's systematic bias. Spot-check rubric verdicts by hand before trusting a new rubric.
+- No pairwise judging (baseline and candidate compared on the same case). Why it is not built yet: [ADR 0008](docs/adr/0008-no-pairwise-judge-yet.md).
+- It measures answer quality, not robustness to prompt injection.
+- Free-tier providers rate-limit. The router retries with backoff, but large datasets may need a paid tier.
 
-prompts/               Versioned prompt YAMLs — the "code" being tested
-golden_dataset/        53 hand-labelled cases across 4 categories
-tests/                 100 tests · 86% coverage · fully hermetic
-.github/workflows/     ci.yml (lint, type, test) · eval.yml (eval on PR)
-```
+## Part of a system
 
-Full module map and design decisions → [`docs/architecture.md`](docs/architecture.md)
-
----
-
-## Tech stack
-
-| | Library / Tool | Role |
-|:--|:--|:--|
-| **Core** | `litellm` | Provider-agnostic LLM router — one API for 100+ models |
-| | `pydantic` v2 + `pydantic-settings` | Runtime-validated models; env-driven config |
-| | `typer` + `rich` | CLI with pretty tables and coloured output |
-| | `aiosqlite` | Async SQLite run history with schema versioning |
-| | `tenacity` + `httpx` | Webhook retry — exponential backoff + jitter |
-| | `structlog` | Structured, contextual logging |
-| | `jinja2` | HTML report templating |
-| **Dashboard** | `streamlit` + `plotly` | Accuracy timeline, CI band, version comparison |
-| | `pandas` | Tabular diff and category breakdown |
-| **Dev** | `uv` | Fast package manager + lockfile |
-| | `ruff` | Lint + format in one tool |
-| | `pyright` strict | 0 errors, 0 warnings — full type coverage |
-| | `pytest` + `pytest-asyncio` | Hermetic test suite — no network, no keys |
-| | `pre-commit` | Enforces lint + format on every commit |
-
----
+- [trace-to-golden](https://github.com/adel-saoud/trace-to-golden) turns reviewed production traces into cases in this repo's dataset format.
+- [agent-mesh](https://github.com/adel-saoud/agent-mesh) exports its answers per suite as a predictions file that `lrd score` grades without re-running the agents.
 
 ## Development
 
 ```bash
 uv sync --all-extras
-uv run pre-commit install
-
-uv run ruff check --fix .    # lint + autofix
-uv run ruff format .         # format
-uv run pyright               # type-check — must stay at 0 errors
-uv run pytest                # 100 tests, 86% coverage, gate at 85%
+uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+uv run pre-commit run --all-files   # ruff, pyright strict, gitleaks
+uv run pytest                       # coverage floor 90%
 ```
 
----
-
-## Honest limitations
-
-- **Judge variance is dampened, not eliminated.** Majority vote helps; pairwise judging (comparing versions head-to-head) would be the next tier — not implemented.
-- **Binary CI only.** Wilson interval is for pass/fail. A bootstrap CI on the summary score (1–5) would give a tighter signal — not implemented.
-- **53 cases catches large regressions.** Subtle drops (≤5 pp) need 200+ cases for CIs to cleanly separate. Documented; not pretending otherwise.
-- **No adversarial robustness.** This evaluates classifier quality, not resistance to prompt injection.
-- **Free-tier rate limits apply.** The Router retries with backoff, but sustained bursts may need a paid tier.
-
----
+Releases: `uv run cz bump` updates the version, `CHANGELOG.md` and the `v*` tag; the GitHub release is written from that CHANGELOG entry. The package is not on PyPI; install it from GitHub with `uv tool install git+https://github.com/adel-saoud/llm-regression-detector`. Dataset format: [docs/golden-dataset-guide.md](docs/golden-dataset-guide.md). Planned GitHub Action: [docs/github-action.md](docs/github-action.md). Extension points: [docs/extending.md](docs/extending.md).
 
 ## License
 
-[MIT](LICENSE) — use it, fork it, ship it.
+[MIT](LICENSE)

@@ -19,7 +19,7 @@ Suggest to the user to update the context files as needed to reflect the project
 
 ## Critical Gotchas
 
-- **Adding a field to `RunSummary`/`EvalRun`**: 4-step change — model → `conftest.py::make_run` → bump `CURRENT_SCHEMA_VERSION` + add `_migrate_payload` branch → add fixture row in `test_storage_migration.py`.
-- **Severity is CI-aware**: CRITICAL fires only when Wilson 95% CIs do not overlap. In practice this needs ~30+ cases — small-N tests produce WARNING regardless of delta size.
-- **`dashboard/app.py`**: Excluded from pyright — no type stubs for streamlit/plotly/pandas.
-- **`git diff --name-only`**: Lists deleted files — use `--diff-filter=AM` when detecting changed prompts in CI.
+- **Adding a field to `RunSummary`/`EvalRun`**: 4-step change: model → `conftest.py::make_run` → bump `CURRENT_SCHEMA_VERSION` + add `_migrate_payload` branch → add fixture row in `test_storage_migration.py`.
+- **Severity is CI-aware**: CRITICAL fires only when Wilson 95% CIs do not overlap. In practice this needs ~30+ cases; small-N tests produce WARNING regardless of delta size.
+- **`dashboard/app.py`**: Excluded from pyright, no type stubs for streamlit/plotly/pandas.
+- **`git diff --name-only`**: Lists deleted files; use `--diff-filter=AM` when detecting changed prompts in CI.

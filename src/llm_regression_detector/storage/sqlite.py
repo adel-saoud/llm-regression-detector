@@ -3,7 +3,7 @@
 Eval runs are persisted as JSON blobs alongside indexed columns. A
 ``schema_meta`` table tracks the on-disk schema version; ``initialize`` runs
 forward-only migrations on attach. Old rows that pre-date a non-additive change
-are loaded leniently — pydantic models in this project use ``extra="forbid"``,
+are loaded leniently: pydantic models in this project use ``extra="forbid"``,
 so we add new fields with sensible defaults rather than evolving them in place.
 """
 
@@ -18,6 +18,7 @@ import aiosqlite
 from llm_regression_detector.eval.dataset import EvalRun
 
 CURRENT_SCHEMA_VERSION = 1
+"""Version written on every saved row; bump it with a matching ``_migrate_payload`` branch."""
 
 _SCHEMA_V1 = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -56,6 +57,7 @@ class SQLiteStorage:
         self._db_path = Path(db_path)
 
     async def initialize(self) -> None:
+        """Create the database file, tables and index if missing; safe to call every run."""
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(self._db_path) as db:
             await db.executescript(_SCHEMA_V1)
@@ -66,12 +68,14 @@ class SQLiteStorage:
             await db.commit()
 
     async def schema_version(self) -> int:
+        """On-disk schema version, or 0 for a database that was never initialized."""
         async with aiosqlite.connect(self._db_path) as db:
             cursor = await db.execute("SELECT value FROM schema_meta WHERE key = 'schema_version'")
             row = await cursor.fetchone()
         return int(row[0]) if row else 0
 
     async def save(self, run: EvalRun) -> None:
+        """Insert the run, replacing a stored run with the same ``run_id``."""
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 """
@@ -93,6 +97,7 @@ class SQLiteStorage:
             await db.commit()
 
     async def get(self, run_id: str) -> EvalRun | None:
+        """The run with this id, or ``None``."""
         async with aiosqlite.connect(self._db_path) as db:
             cursor = await db.execute(
                 "SELECT payload_json, schema_version FROM eval_runs WHERE run_id = ?",
@@ -104,6 +109,7 @@ class SQLiteStorage:
         return _load_run(row[0], int(row[1]))
 
     async def latest_baseline(self, prompt_name: str) -> EvalRun | None:
+        """Newest stored run of this prompt: the baseline the next run diffs against."""
         async with aiosqlite.connect(self._db_path) as db:
             cursor = await db.execute(
                 """
@@ -120,7 +126,7 @@ class SQLiteStorage:
         return _load_run(row[0], int(row[1]))
 
     async def recent(self, prompt_name: str, limit: int = 7) -> list[EvalRun]:
-        """Return the N most recent runs for a prompt — newest first."""
+        """Return the N most recent runs for a prompt: newest first."""
         async with aiosqlite.connect(self._db_path) as db:
             cursor = await db.execute(
                 """
@@ -135,7 +141,7 @@ class SQLiteStorage:
         return [_load_run(r[0], int(r[1])) for r in rows]
 
     async def recent_any(self, limit: int = 2) -> list[EvalRun]:
-        """Return the N most recent runs across all prompts — newest first."""
+        """Return the N most recent runs across all prompts: newest first."""
         async with aiosqlite.connect(self._db_path) as db:
             cursor = await db.execute(
                 """
@@ -163,7 +169,7 @@ def _load_run(payload_json: str, row_schema_version: int) -> EvalRun:
 def _migrate_payload(payload: dict[str, Any], *, from_version: int) -> None:
     """Mutate an old-schema payload into the current shape. Forward-only."""
     if from_version < 1:
-        # Earlier schemas didn't have CI / percentiles / per-category — fill defaults.
+        # Earlier schemas didn't have CI / percentiles / per-category: fill defaults.
         summary_raw = payload.get("summary")
         if not isinstance(summary_raw, dict):
             return

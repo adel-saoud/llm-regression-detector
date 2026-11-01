@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 
 class AlertSeverity(StrEnum):
+    """Diff verdict: CRITICAL fails CI, WARNING is reported but does not fail it."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -48,11 +50,14 @@ class NotifierError(Exception):
 class Notifier(Protocol):
     """Send an alert payload to an external system. Implementations format per-platform."""
 
-    async def send(self, payload: AlertPayload) -> None: ...
+    async def send(self, payload: AlertPayload) -> None:
+        """Deliver ``payload``; raise ``NotifierError`` when delivery fails for good."""
+        ...
 
 
 class NullNotifier:
-    """No-op notifier — used when no webhook URL is configured."""
+    """No-op notifier: used when no webhook URL is configured."""
 
     async def send(self, payload: AlertPayload) -> None:
+        """Drop the alert, so callers never branch on whether a webhook is set."""
         return None

@@ -15,11 +15,14 @@ _ICON: dict[AlertSeverity, str] = {
 
 
 class GoogleChatNotifier:
+    """Posts alerts to a Google Chat incoming webhook as a Card V2 with a severity icon."""
+
     def __init__(self, *, webhook_url: str, timeout_s: float = 10.0) -> None:
         self._webhook_url = webhook_url
         self._timeout_s = timeout_s
 
     async def send(self, payload: AlertPayload) -> None:
+        """Deliver with the shared retry policy; ``NotifierError`` when it gives up."""
         await post_with_retry(
             self._webhook_url,
             body=self._format(payload),
@@ -29,6 +32,7 @@ class GoogleChatNotifier:
 
     @staticmethod
     def _format(payload: AlertPayload) -> dict[str, Any]:
+        """Platform body; ID lists are cut at 10 so long runs stay within message limits."""
         delta_pp = payload.accuracy_delta * 100
         widgets: list[dict[str, Any]] = [
             {"textParagraph": {"text": payload.summary}},

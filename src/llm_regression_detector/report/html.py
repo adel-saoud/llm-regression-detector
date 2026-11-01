@@ -16,7 +16,7 @@ from llm_regression_detector.eval.dataset import EvalRun
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 _TEMPLATE_NAME = "report.html.j2"
 
-_env = Environment(
+_TEMPLATE_ENVIRONMENT = Environment(
     loader=FileSystemLoader(_TEMPLATES_DIR),
     autoescape=select_autoescape(["html", "j2"]),
     trim_blocks=True,
@@ -30,7 +30,7 @@ def render_html(
     baseline: EvalRun | None = None,
 ) -> str:
     """Render an HTML report. ``diff`` and ``baseline`` are optional (first-run case)."""
-    template = _env.get_template(_TEMPLATE_NAME)
+    template = _TEMPLATE_ENVIRONMENT.get_template(_TEMPLATE_NAME)
     return template.render(candidate=candidate, diff=diff, baseline=baseline)
 
 
@@ -41,7 +41,7 @@ def write_html(
     baseline: EvalRun | None = None,
 ) -> Path:
     """Render and persist the HTML report. Creates parent dirs as needed."""
-    out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_html(candidate, diff, baseline), encoding="utf-8")
-    return out
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(render_html(candidate, diff, baseline), encoding="utf-8")
+    return output_path

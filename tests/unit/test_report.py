@@ -4,7 +4,7 @@ from pathlib import Path
 
 from llm_regression_detector.diff.analyzer import Analyzer
 from llm_regression_detector.diff.drift import DriftReport
-from llm_regression_detector.eval.dataset import CategoryAccuracy
+from llm_regression_detector.eval.dataset import CategoryAccuracy, CriterionVerdict
 from llm_regression_detector.report.html import render_html, write_html
 from llm_regression_detector.report.pr_comment import render_pr_comment
 from tests.conftest import make_run
@@ -111,3 +111,37 @@ def test_pr_comment_with_drift_detected() -> None:
     body = render_pr_comment(cand, diff=diff, drift=drift)
     assert "below the" in body
     assert "MA − 2σ" in body
+
+
+def test_render_html_shows_rubric_pass_count() -> None:
+    run = make_run("r1", pass_ids=["a"], fail_ids=[])
+    judge = run.results[0].judge.model_copy(
+        update={
+            "criteria": [
+                CriterionVerdict(criterion="x", passed=True),
+                CriterionVerdict(criterion="y", passed=False),
+            ]
+        }
+    )
+    run.results[0] = run.results[0].model_copy(update={"judge": judge})
+    assert "1/2" in render_html(run)
+
+
+def test_render_html_info_diff_shows_ok_banner_and_large_gain() -> None:
+    ids = [f"c{i:03d}" for i in range(50)]
+    base = make_run("base", pass_ids=ids[:25], fail_ids=ids[25:])
+    cand = make_run("cand", pass_ids=ids, fail_ids=[])
+    diff = Analyzer().diff(base, cand)
+    html = render_html(cand, diff=diff, baseline=base)
+    assert "OK: no regression detected" in html
+    assert "CRITICAL: regression detected" not in html
+    assert "Large gain: check the judge or dataset." in html
+
+
+def test_pr_comment_flags_large_gain() -> None:
+    ids = [f"c{i:03d}" for i in range(50)]
+    base = make_run("base", pass_ids=ids[:25], fail_ids=ids[25:])
+    cand = make_run("cand", pass_ids=ids, fail_ids=[])
+    body = render_pr_comment(cand, diff=Analyzer().diff(base, cand))
+    assert "No regression detected" in body
+    assert "Large gain: check the judge or dataset." in body

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"
 
 [project]
 name = "llm-regression-detector"
@@ -8,15 +8,16 @@ version = "0.1.0"
 description = "CI/CD pipeline that catches LLM quality regressions before they reach production."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 authors = [{ name = "Adel Saoud" }]
 keywords = ["llm", "evaluation", "regression-testing", "ci-cd", "llm-as-judge"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
 ]
@@ -37,15 +38,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dashboard = ["streamlit>=1.45", "plotly>=6.0", "pandas>=2.2"]
-dev = [
-    "pytest>=8.3",
-    "pytest-asyncio>=0.24",
-    "pytest-cov>=6.0",
-    "pytest-mock>=3.14",
-    "ruff>=0.11",
-    "pyright>=1.1.400",
-    "pre-commit>=4.0",
-]
 
 [project.urls]
 Homepage = "https://github.com/adel-saoud/llm-regression-detector"
@@ -55,16 +47,34 @@ Issues = "https://github.com/adel-saoud/llm-regression-detector/issues"
 [project.scripts]
 lrd = "llm_regression_detector.cli:app"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/llm_regression_detector"]
-# Non-Python assets shipped inside the package (Jinja2 templates, Streamlit
-# entry point) are picked up automatically via the package directory above.
-# `tool.hatch.build` includes everything except *.pyc / __pycache__ by default.
+[dependency-groups]
+dev = [
+    "pytest>=9.0,<10",
+    "pytest-asyncio>=1.0",
+    "pytest-cov>=7.0,<8",
+    "pytest-mock>=3.14",
+    "ruff>=0.17,<0.18",
+    "pyright==1.1.414",
+    "pre-commit>=4.0",
+    "commitizen>=4.19,<5",
+]
+
+# uv_build picks up src/llm_regression_detector/ by default, including the
+# Jinja2 templates and the Streamlit entry point that live inside it.
+
+# `cz bump` writes the version to pyproject.toml and uv.lock, prepends the
+# CHANGELOG entry and creates the `v*` tag.
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "uv"
+tag_format = "v$version"
+update_changelog_on_bump = true
+major_version_zero = true
 
 # ── Ruff: lint + format ─────────────────────────────────────────────────────
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
@@ -79,7 +89,7 @@ select = [
     "RUF",        # ruff-specific
     "N",          # pep8-naming
     "ANN",        # type annotations
-    "S",          # bandit (security)
+    "S",          # flake8-bandit security rules
     "PT",         # pytest style
     "TID",        # tidy imports
     "PL",         # pylint
@@ -87,18 +97,19 @@ select = [
 ]
 ignore = [
     "ANN401",  # allow Any in narrow cases (e.g. **kwargs passthrough to litellm)
-    "PLR0912", # too many branches — formatters branch on optional report sections
-    "PLR0913", # too many arguments — fine for typer CLI handlers
-    "PLR0915", # too many statements — same as PLR0912
-    "PLR2004", # magic value comparisons — readable in context
-    "PLC0415", # local imports — used intentionally for lazy/streamlit imports
-    "PLW0108", # unnecessary lambda — pydantic Field default_factory needs callables
+    "PLR0912", # too many branches: formatters branch on optional report sections
+    "PLR0913", # too many arguments: fine for typer CLI handlers
+    "PLR0917", # too many positional arguments: typer maps CLI options to parameters
+    "PLR0915", # too many statements: same as PLR0912
+    "PLR2004", # magic value comparisons: readable in context
+    "PLC0415", # local imports: used intentionally for lazy/streamlit imports
+    "PLW0108", # unnecessary lambda: pydantic Field default_factory needs callables
     "TRY003",  # long exception messages are fine
-    "TRY004",  # ValueError vs TypeError — domain choice, ValueError is fine for parsing
-    "TRY301",  # abstract raise to inner func — overkill for inline branch + raise patterns
-    "RUF001",  # ambiguous unicode in strings — intentional (en dashes etc)
-    "RUF002",  # ambiguous unicode in docstrings — intentional
-    "RUF003",  # ambiguous unicode in comments — intentional
+    "TRY004",  # ValueError vs TypeError: domain choice, ValueError is fine for parsing
+    "TRY301",  # abstract raise to inner func: overkill for inline branch + raise patterns
+    "RUF001",  # ambiguous unicode in strings: intentional (en dashes etc)
+    "RUF002",  # ambiguous unicode in docstrings: intentional
+    "RUF003",  # ambiguous unicode in comments: intentional
     "S101",    # assert is fine (used in tests)
 ]
 
@@ -116,10 +127,10 @@ docstring-code-format = true
 # ── Pyright: strict type checking ───────────────────────────────────────────
 [tool.pyright]
 include = ["src", "tests"]
-# Streamlit/plotly/pandas lack type stubs — exclude the dashboard from strict checks
+# Streamlit/plotly/pandas lack type stubs: exclude the dashboard from strict checks
 exclude = ["src/llm_regression_detector/dashboard/app.py"]
 typeCheckingMode = "strict"
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 reportMissingTypeStubs = "warning"
 reportUnknownMemberType = "warning"
 reportUnknownArgumentType = "warning"
@@ -127,7 +138,7 @@ reportUnknownVariableType = "warning"
 
 # ── Pytest ───────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "9.0"
 addopts = [
     "-ra",
     "--strict-markers",
@@ -146,7 +157,7 @@ markers = [
 source = ["src/llm_regression_detector"]
 branch = true
 omit = [
-    # Streamlit UI surface — hard to unit-test, exercised by the dashboard itself
+    # Streamlit UI surface: hard to unit-test, exercised by the dashboard itself
     "src/llm_regression_detector/dashboard/*",
 ]
 
@@ -157,4 +168,4 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
-fail_under = 85
+fail_under = 90

@@ -4,7 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-Planned as 0.2.0. Below 1.0 a breaking change bumps the minor version (`major_version_zero` in the commitizen config).
+## [0.2.0] - 2026-11-01
+
+Below 1.0 a breaking change bumps the minor version (`major_version_zero` in the commitizen config).
 
 ### Added
 

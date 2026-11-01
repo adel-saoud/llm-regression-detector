@@ -1,7 +1,8 @@
 name: incident-triage
 version: v1
+dataset: ../golden_dataset/incidents.json
 description: |
-  Baseline prompt — classifies incident reports into P0/P1/P2/P3 severity
+  Baseline prompt: classifies incident reports into P0/P1/P2/P3 severity
   and produces a one-sentence summary. Uses few-shot examples for stability.
 
 system: |
@@ -12,10 +13,10 @@ system: |
     - "summary":  a single-sentence description of the incident and its impact
 
   Severity definitions:
-    p0 — Complete outage or data loss. All or most users affected. Page everyone now.
-    p1 — Major feature broken or severely degraded for many users. Page on-call.
-    p2 — Partial degradation or non-critical feature down. Same-day fix needed.
-    p3 — Minor bug or cosmetic issue. Few users affected. Can be triaged to backlog.
+    p0: Complete outage or data loss. All or most users affected. Page everyone now.
+    p1: Major feature broken or severely degraded for many users. Page on-call.
+    p2: Partial degradation or non-critical feature down. Same-day fix needed.
+    p3: Minor bug or cosmetic issue. Few users affected. Can be triaged to backlog.
 
   Be precise. Do not include any prose outside the JSON.
 
@@ -33,6 +34,6 @@ few_shots:
     output: '{"category": "p3", "summary": "Billing page tooltip displays wrong currency symbol for Canadian users."}'
 
 user_template: |
-  Incident report: {email}
+  Incident report: {input_text}
 
   Output JSON only.

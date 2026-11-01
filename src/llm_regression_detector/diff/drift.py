@@ -1,4 +1,4 @@
-"""Slow-drift detector — flags accuracy declining gradually over many runs.
+"""Slow-drift detector: flags accuracy declining gradually over many runs.
 
 Single PRs catch sudden regressions. Slow drift (a slow tightening of the
 prompt over weeks, or a model provider quietly retraining) is what eval
@@ -38,7 +38,7 @@ def analyze_drift(
     """Run the drift check over a window of past ``EvalRun``s.
 
     ``historical`` should be the runs **before** ``latest`` (newest first or
-    oldest first — order doesn't affect the moving-average computation).
+    oldest first: order doesn't affect the moving-average computation).
     """
     accuracies = [r.summary.accuracy for r in historical]
     signal = detect_slow_drift(accuracies, latest.summary.accuracy, k_sigma=k_sigma)

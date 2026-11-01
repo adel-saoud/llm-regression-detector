@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from llm_regression_detector.eval.dataset import (
-    Category,
     GoldenCase,
     PromptSpec,
 )
@@ -9,7 +8,7 @@ from llm_regression_detector.eval.dataset import (
 
 def test_golden_dataset_has_all_categories(golden_dataset: list[GoldenCase]) -> None:
     categories = {case.expected_category for case in golden_dataset}
-    assert categories == set(Category)
+    assert categories == {"p0", "p1", "p2", "p3"}
 
 
 def test_golden_dataset_min_size(golden_dataset: list[GoldenCase]) -> None:

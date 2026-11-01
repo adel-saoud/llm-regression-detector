@@ -13,7 +13,7 @@ uv run lrd run \
   --save --no-diff --no-notify
 
 uv run lrd run \
-  --prompt prompts/incident_triage_v2_degraded.yaml \
+  --prompt prompts/demo/incident_triage_v2_degraded.yaml \
   --dataset golden_dataset/incidents.json \
   --report evals/report_v2.html \
   --diff --save --no-notify

@@ -2,16 +2,20 @@
 
 Wraps ``litellm.Router`` with a tiered fallback chain.  Priority order:
 
-0. Custom provider — ``LRD_CUSTOM_MODEL`` (any litellm model string, e.g.
-   ``anthropic/claude-haiku-4-5``, ``ollama/llama3.2:3b``, ``openai/gpt-4o``).
+0. Custom provider: ``LRD_CUSTOM_MODEL`` (any litellm model string, e.g.
+   ``anthropic/claude-haiku-4-5``, ``ollama/qwen3.5:0.8b``, ``openai/gpt-4o``).
    When set, this slots in as the highest-priority tier.  Use
    ``LRD_CUSTOM_API_KEY`` / ``LRD_CUSTOM_API_BASE`` as companions.
-   ``ollama/`` models auto-detect the API base from ``OLLAMA_BASE_URL``.
+   ``ollama/`` models auto-detect the API base from ``LRD_OLLAMA_BASE_URL``.
 1. Hugging Face Inference Providers (``LRD_HF_MODEL``, requires ``HF_TOKEN``)
 2. Google Gemini free tier (``LRD_GEMINI_MODEL``, requires ``GEMINI_API_KEY``)
 3. Ollama fully local (``LRD_OLLAMA_MODEL``, no key required)
 
-Every model id comes from ``Settings`` (env vars) — nothing is hardcoded.
+The judge gets its own single-model client from ``LRD_JUDGE_MODEL``, so the model
+under test never grades its own answers. Ollama tiers receive ``LRD_REASONING_EFFORT``
+as litellm's ``reasoning_effort``, which litellm sends to Ollama as ``think``.
+
+Every model id comes from ``Settings`` (env vars): nothing is hardcoded.
 
 When no real credentials are present, ``build_client`` returns a deterministic
 mock so the full pipeline runs end-to-end offline during development.
@@ -24,12 +28,15 @@ from dataclasses import dataclass
 from typing import Any, Protocol, cast, runtime_checkable
 
 from litellm.router import Router
+from pydantic import SecretStr
 
 from llm_regression_detector.config import Settings
 
 DEFAULT_MODEL_ALIAS = "default"
+"""Router ``model_name`` of the primary tier; every call asks for it and litellm falls back."""
 
 _HF_API_BASE = "https://router.huggingface.co/v1"
+"""OpenAI-compatible endpoint of Hugging Face Inference Providers."""
 
 
 class LLMError(Exception):
@@ -57,11 +64,13 @@ class LLMClient(Protocol):
         *,
         temperature: float = 0.0,
         max_tokens: int | None = None,
-    ) -> LLMResponse: ...
+    ) -> LLMResponse:
+        """Return one chat completion for ``messages`` (OpenAI chat format)."""
+        ...
 
 
 class RouterClient:
-    """Production client — routes through ``litellm.Router`` with fallbacks."""
+    """Production client: routes through ``litellm.Router`` with fallbacks."""
 
     def __init__(self, router: Router) -> None:
         self._router = router
@@ -73,9 +82,10 @@ class RouterClient:
         temperature: float = 0.0,
         max_tokens: int | None = None,
     ) -> LLMResponse:
+        """Call the primary tier through the router; ``LLMError`` once every tier failed."""
         start = time.perf_counter()
         try:
-            resp: Any = await self._router.acompletion(  # pyright: ignore[reportUnknownMemberType]
+            response: Any = await self._router.acompletion(  # pyright: ignore[reportUnknownMemberType]
                 model=DEFAULT_MODEL_ALIAS,
                 messages=cast(Any, messages),
                 temperature=temperature,
@@ -85,11 +95,11 @@ class RouterClient:
             raise LLMError(f"All providers in fallback chain failed: {exc}") from exc
 
         latency_ms = (time.perf_counter() - start) * 1000.0
-        choice = resp.choices[0]
-        usage = getattr(resp, "usage", None)
+        choice = response.choices[0]
+        usage = getattr(response, "usage", None)
         return LLMResponse(
             content=choice.message.content or "",
-            model=getattr(resp, "model", DEFAULT_MODEL_ALIAS),
+            model=getattr(response, "model", DEFAULT_MODEL_ALIAS),
             prompt_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
             completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
             latency_ms=latency_ms,
@@ -103,23 +113,28 @@ def _build_router(settings: Settings) -> Router:
     ``DEFAULT_MODEL_ALIAS`` (the name callers use); subsequent tiers get unique
     group names wired into litellm's ``fallbacks`` cascade.
 
-    All model ids come from ``Settings`` — no provider models are hardcoded here.
+    All model ids come from ``Settings``: no provider models are hardcoded here.
+    Two retries per tier, one second apart, absorb free-tier rate limits before
+    the router moves to the next tier.
     """
-    # Each entry: (natural_name, litellm_params)
+    # (router model_name for a fallback tier, litellm_params)
     tiers: list[tuple[str, dict[str, Any]]] = []
 
-    # Tier 0 — custom model (explicit override, highest priority)
+    # Tier 0: custom model (explicit override, highest priority)
     if settings.custom_model is not None:
-        params: dict[str, Any] = {"model": settings.custom_model}
-        if settings.custom_api_key is not None:
-            params["api_key"] = settings.custom_api_key.get_secret_value()
-        if settings.custom_api_base is not None:
-            params["api_base"] = settings.custom_api_base
-        elif settings.custom_model.startswith("ollama/"):
-            params["api_base"] = settings.ollama_base_url
-        tiers.append(("custom", params))
+        tiers.append(
+            (
+                "custom",
+                _model_params(
+                    settings,
+                    settings.custom_model,
+                    api_key=settings.custom_api_key,
+                    api_base=settings.custom_api_base,
+                ),
+            )
+        )
 
-    # Tier 1 — Hugging Face Inference Providers
+    # Tier 1: Hugging Face Inference Providers
     if settings.hf_token is not None:
         tiers.append(
             (
@@ -132,7 +147,7 @@ def _build_router(settings: Settings) -> Router:
             )
         )
 
-    # Tier 2 — Google Gemini
+    # Tier 2: Google Gemini
     if settings.gemini_api_key is not None:
         tiers.append(
             (
@@ -144,22 +159,11 @@ def _build_router(settings: Settings) -> Router:
             )
         )
 
-    # Tier 3 — Ollama (always present unless custom model is already an Ollama model)
-    custom_is_ollama = settings.custom_model is not None and settings.custom_model.startswith(
-        "ollama/"
-    )
+    # Tier 3: Ollama (always present unless custom model is already an Ollama model)
+    custom_is_ollama = settings.custom_model is not None and _is_ollama(settings.custom_model)
     if not custom_is_ollama:
-        tiers.append(
-            (
-                "ollama",
-                {
-                    "model": settings.ollama_model,
-                    "api_base": settings.ollama_base_url,
-                },
-            )
-        )
+        tiers.append(("ollama", _model_params(settings, settings.ollama_model)))
 
-    # First tier = primary (DEFAULT_MODEL_ALIAS); the rest are named fallback groups.
     model_list: list[dict[str, Any]] = []
     fallback_names: list[str] = []
     for i, (name, litellm_params) in enumerate(tiers):
@@ -177,8 +181,31 @@ def _build_router(settings: Settings) -> Router:
         fallbacks=fallbacks,  # pyright: ignore[reportArgumentType]
         num_retries=2,
         retry_after=1,
-        routing_strategy="simple-shuffle",
     )
+
+
+def _is_ollama(model: str) -> bool:
+    return model.startswith(("ollama/", "ollama_chat/"))
+
+
+def _model_params(
+    settings: Settings,
+    model: str,
+    *,
+    api_key: SecretStr | None = None,
+    api_base: str | None = None,
+) -> dict[str, Any]:
+    """litellm params for one model; Ollama models get the local base URL and the
+    thinking setting, the only provider where ``reasoning_effort`` is verified."""
+    params: dict[str, Any] = {"model": model}
+    if api_key is not None:
+        params["api_key"] = api_key.get_secret_value()
+    if api_base is not None:
+        params["api_base"] = api_base
+    if _is_ollama(model):
+        params.setdefault("api_base", settings.ollama_base_url)
+        params["reasoning_effort"] = settings.reasoning_effort.value
+    return params
 
 
 def build_client(settings: Settings) -> LLMClient:
@@ -193,3 +220,29 @@ def build_client(settings: Settings) -> LLMClient:
         return MockLLMClient()
 
     return RouterClient(_build_router(settings))
+
+
+def build_judge_client(settings: Settings) -> LLMClient:
+    """The judge's client: ``LRD_JUDGE_MODEL`` alone, with no fallback to the model under test.
+
+    A fallback could hand grading to the model being graded, which is the bias the
+    separate judge exists to avoid. The mock answers both roles offline.
+    """
+    if settings.is_mock_mode:
+        from llm_regression_detector.llm.mock import MockLLMClient
+
+        return MockLLMClient()
+
+    params = _model_params(
+        settings,
+        settings.judge_model,
+        api_key=settings.judge_api_key,
+        api_base=settings.judge_api_base,
+    )
+    return RouterClient(
+        Router(
+            model_list=[{"model_name": DEFAULT_MODEL_ALIAS, "litellm_params": params}],
+            num_retries=2,
+            retry_after=1,
+        )
+    )

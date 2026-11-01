@@ -1,81 +1,79 @@
 name: Regression Eval
 
+# Live LLM evals spend API calls and read secrets, so they run only on pull
+# requests from branches of this repository (never from forks) or by hand.
+
 on:
   pull_request:
     paths:
       - "prompts/**"
       - "golden_dataset/**"
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Branch to diff against when picking affected prompts"
+        required: true
+        default: main
 
 permissions:
   contents: read
-  pull-requests: write
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   eval:
-    name: Run eval on changed prompts
+    name: Run eval on affected prompts
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install 3.11
+          python-version: "3.14"
 
       - name: Install dependencies
-        run: uv sync
-
-      - name: Detect changed prompt
-        id: changed
-        run: |
-          PROMPT=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD \
-            -- 'prompts/*.yaml' | head -1)
-          echo "prompt=${PROMPT:-prompts/incident_triage_v1.yaml}" >> "$GITHUB_OUTPUT"
+        run: uv sync --locked
 
       - name: Restore baseline DB
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: evals/runs.db
-          key: eval-baseline-${{ github.base_ref }}
+          key: eval-baseline-${{ github.base_ref || inputs.base_ref }}
           restore-keys: |
             eval-baseline-
 
-      - name: Run eval
+      - name: Evaluate affected prompts
         env:
+          BASE_REF: ${{ github.base_ref || inputs.base_ref }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
-        run: |
-          uv run lrd run \
-            --prompt "${{ steps.changed.outputs.prompt }}" \
-            --dataset golden_dataset/incidents.json \
-            --report evals/report.html \
-            --diff \
-            --save \
-            --notify \
-            --fail-on-critical
+          # The judge must differ from the model under test (HF first); CI has no Ollama.
+          LRD_JUDGE_MODEL: ${{ vars.LRD_JUDGE_MODEL || 'gemini/gemini-2.0-flash' }}
+          LRD_JUDGE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LRD_WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: bash scripts/ci_eval_affected.sh "origin/${BASE_REF}"
 
-      - name: Generate PR comment
+      - name: Upload reports
         if: always()
-        run: |
-          uv run lrd pr-comment --output pr_comment.md
-
-      - name: Upload report
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: eval-report
+          if-no-files-found: ignore
           path: |
-            evals/report.html
+            evals/report-*.html
             pr_comment.md
 
       - name: Comment on PR
-        if: always() && hashFiles('pr_comment.md') != ''
-        uses: marocchino/sticky-pull-request-comment@v2
+        if: always() && github.event_name == 'pull_request' && hashFiles('pr_comment.md') != ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
           path: pr_comment.md

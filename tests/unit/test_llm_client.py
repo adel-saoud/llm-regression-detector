@@ -10,6 +10,7 @@ from llm_regression_detector.llm.client import (  # pyright: ignore[reportPrivat
     RouterClient,
     _build_router,
     build_client,
+    build_judge_client,
 )
 from llm_regression_detector.llm.mock import MockLLMClient
 
@@ -105,7 +106,7 @@ def test_custom_model_with_hf_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_custom_ollama_model_no_duplicate(monkeypatch: pytest.MonkeyPatch) -> None:
     """ollama/ custom model: Ollama not added again as a separate fallback tier."""
-    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/llama3.2:3b")
+    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/qwen3.5:0.8b")
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
@@ -115,9 +116,9 @@ def test_custom_ollama_model_no_duplicate(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_custom_ollama_auto_detects_api_base(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ollama/ prefix auto-populates api_base from OLLAMA_BASE_URL."""
-    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/llama3.2:3b")
-    monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    """ollama/ prefix auto-populates api_base from LRD_OLLAMA_BASE_URL."""
+    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/qwen3.5:0.8b")
+    monkeypatch.setenv("LRD_OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
@@ -128,13 +129,57 @@ def test_custom_ollama_auto_detects_api_base(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_custom_model_disables_mock_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     """Setting LRD_CUSTOM_MODEL means real mode even without HF/Gemini keys."""
-    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/llama3.2:3b")
+    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/qwen3.5:0.8b")
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
     assert settings.is_mock_mode is False
     client = build_client(settings)
     assert not isinstance(client, MockLLMClient)
+
+
+def _litellm_params(router: object) -> list[dict[str, object]]:
+    return [m["litellm_params"] for m in router.model_list]  # type: ignore[attr-defined]  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportAttributeAccessIssue]
+
+
+def test_ollama_tier_turns_thinking_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Thinking models spend max_tokens on thinking unless litellm sends think: false."""
+    monkeypatch.setenv("HF_TOKEN", "hf_x")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("LRD_CUSTOM_MODEL", raising=False)
+    monkeypatch.delenv("LRD_REASONING_EFFORT", raising=False)
+    hf, ollama = _litellm_params(_build_router(Settings(_env_file=None)))  # type: ignore[call-arg]
+    assert ollama["reasoning_effort"] == "none"
+    assert "reasoning_effort" not in hf  # only verified for Ollama
+
+
+def test_reasoning_effort_setting_reaches_ollama(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama_chat/qwen3.5:0.8b")
+    monkeypatch.setenv("LRD_REASONING_EFFORT", "high")
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    (custom,) = _litellm_params(_build_router(Settings(_env_file=None)))  # type: ignore[call-arg]
+    assert custom["reasoning_effort"] == "high"
+
+
+def test_judge_client_uses_only_the_judge_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No fallback: a failing judge must not hand grading to the model under test."""
+    monkeypatch.setenv("LRD_CUSTOM_MODEL", "ollama/qwen3.5:0.8b")
+    monkeypatch.setenv("LRD_JUDGE_MODEL", "ollama/qwen3.5:4b")
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    client = build_judge_client(Settings(_env_file=None))  # type: ignore[call-arg]
+    assert isinstance(client, RouterClient)
+    (judge,) = _litellm_params(client._router)
+    assert judge["model"] == "ollama/qwen3.5:4b"
+    assert judge["api_base"] == "http://localhost:11434"
+    assert judge["reasoning_effort"] == "none"
+
+
+def test_judge_client_is_mock_without_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in ("HF_TOKEN", "GEMINI_API_KEY", "LRD_CUSTOM_MODEL"):
+        monkeypatch.delenv(var, raising=False)
+    assert isinstance(build_judge_client(Settings(_env_file=None)), MockLLMClient)  # type: ignore[call-arg]
 
 
 async def test_mock_client_returns_classifier_json() -> None:

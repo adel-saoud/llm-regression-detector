@@ -5,18 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from llm_regression_detector.notify.base import AlertPayload, AlertSeverity, NotifierError
+from llm_regression_detector.notify.base import NotifierError
 from llm_regression_detector.notify.transport import post_with_retry
-
-
-def _payload() -> AlertPayload:
-    return AlertPayload(
-        severity=AlertSeverity.WARNING,
-        title="t",
-        summary="s",
-        accuracy_delta=-0.05,
-        run_id="r",
-    )
 
 
 class _FakeAsyncClient:
@@ -27,7 +17,6 @@ class _FakeAsyncClient:
         statuses: list[int],
         *,
         raise_first_n: int = 0,
-        timeout: float | None = None,
     ) -> None:
         self._statuses = list(statuses)
         self._raise_first_n = raise_first_n
@@ -95,8 +84,3 @@ async def test_non_retryable_4xx_fails_immediately(monkeypatch: pytest.MonkeyPat
             platform_name="Test",
         )
     assert fake.calls == 1
-
-
-def test_payload_constructible() -> None:
-    # sanity — used as input across the retry tests
-    assert _payload().run_id == "r"

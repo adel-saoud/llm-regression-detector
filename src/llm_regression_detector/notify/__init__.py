@@ -1,4 +1,4 @@
-"""Webhook notifications — platform-agnostic via the ``Notifier`` Protocol."""
+"""Webhook notifications: platform-agnostic via the ``Notifier`` Protocol."""
 
 from __future__ import annotations
 
@@ -17,8 +17,9 @@ from llm_regression_detector.notify.google_chat import GoogleChatNotifier
 from llm_regression_detector.notify.slack import SlackNotifier
 
 NotifierFactory = Callable[[str], Notifier]
+"""Builds a notifier from a webhook URL."""
 
-_PLATFORM_MAP: dict[WebhookPlatform, NotifierFactory] = {
+_NOTIFIER_BY_PLATFORM: dict[WebhookPlatform, NotifierFactory] = {
     WebhookPlatform.SLACK: lambda url: SlackNotifier(webhook_url=url),
     WebhookPlatform.GOOGLE_CHAT: lambda url: GoogleChatNotifier(webhook_url=url),
     WebhookPlatform.DISCORD: lambda url: DiscordNotifier(webhook_url=url),
@@ -31,7 +32,7 @@ def build_notifier(settings: Settings) -> Notifier:
     platform = settings.resolved_webhook_platform
     if platform is None or settings.webhook_url is None:
         return NullNotifier()
-    return _PLATFORM_MAP[platform](settings.webhook_url)
+    return _NOTIFIER_BY_PLATFORM[platform](settings.webhook_url)
 
 
 __all__ = [

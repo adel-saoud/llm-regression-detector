@@ -13,4 +13,6 @@ Then:
 4. Verify the dataset still loads: `uv run python -c "from llm_regression_detector.eval.dataset import load_dataset; load_dataset('golden_dataset/incidents.json'); print('OK')"`
 5. Run the dataset tests: `uv run pytest tests/unit/test_dataset.py -v`
 
+For a free-text dataset (schema v2, such as `golden_dataset/store_support_answers.json`), ask for a `reference_answer` and/or `rubric` criteria instead of a category, append the case inside the `cases` array, and run `uv run pytest tests/unit/test_dataset_v2.py -v`. Each case needs at least one of `expected_category`, `reference_answer` or `rubric`; see `docs/golden-dataset-guide.md`.
+
 Remind the user: adding hard/adversarial cases is the best way to surface prompt weaknesses before they reach production.

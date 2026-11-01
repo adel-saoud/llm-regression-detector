@@ -22,7 +22,7 @@ env/
 .env
 .env.*
 !.env.example
-.env.demo.bak  # transient — created by demo.tape if interrupted
+.env.demo.bak  # transient: created by docs/demo.tape if interrupted
 
 # Caches
 .pytest_cache/
@@ -56,7 +56,10 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
-# Claude Code — keep project config and commands, exclude local session state
+# Claude Code: keep project config and commands, exclude local session state
 .claude/settings.local.json
 .claude/worktrees/
 .claude/skills/
+
+# Local brag notes, never committed
+brag-output/

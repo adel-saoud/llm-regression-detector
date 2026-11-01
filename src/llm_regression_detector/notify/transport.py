@@ -1,11 +1,11 @@
 """Shared HTTP transport for webhook delivery.
 
-Webhook delivery must survive transient 5xx and connection errors — losing an
-alert is the worst possible outcome for a regression detector. This module
-centralises retry policy in one place so every concrete notifier behaves
-identically: three attempts, exponential backoff with jitter (avoids
-thundering-herd collisions when multiple processes retry simultaneously),
-retries on 408 / 425 / 429 / 5xx and ``httpx`` connection errors only.
+Losing an alert is the worst outcome for a regression detector, so delivery
+retries transient failures: three attempts with exponential backoff and jitter
+(jitter keeps several processes from retrying the same webhook in lockstep).
+Only 408, 425, 429, 500, 502, 503, 504 and ``httpx`` transport errors are
+retried; any other 4xx or 5xx fails at once because a retry cannot fix it.
+Every notifier posts through ``post_with_retry`` so they all share one policy.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from __future__ import annotations
 import httpx
 from tenacity import (
     AsyncRetrying,
-    RetryError,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
@@ -21,14 +20,20 @@ from tenacity import (
 
 from llm_regression_detector.notify.base import NotifierError
 
-_RETRYABLE_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+_RETRYABLE_STATUS_CODES = frozenset({408, 425, 429, 500, 502, 503, 504})
+"""Statuses that mean "try again later": timeout, too early, rate limit, server or gateway down."""
 
 
 class _RetryableHTTPError(Exception):
-    """Internal sentinel — raised on a retryable HTTP status to drive tenacity."""
+    """Raised on a retryable status so tenacity, which retries on exceptions, sees it."""
 
 
 def _retry_policy() -> AsyncRetrying:
+    """A fresh tenacity controller per delivery; ``reraise`` surfaces the last real error.
+
+    Worst case is three attempts and under 2 s of waiting (0.5 s then 1 s, plus jitter),
+    short enough for a CI job.
+    """
     return AsyncRetrying(
         stop=stop_after_attempt(3),
         wait=wait_exponential_jitter(initial=0.5, max=2.0, jitter=0.25),
@@ -44,17 +49,18 @@ async def post_with_retry(
     timeout_s: float,
     platform_name: str,
 ) -> None:
-    """POST ``body`` to ``url`` with bounded retries on transient failures.
+    """POST ``body`` as JSON to ``url``, retrying transient failures.
 
-    Raises :class:`NotifierError` if all attempts fail. Used by every concrete
-    notifier so retry logic lives in exactly one place.
+    Raises:
+        NotifierError: on a non-retryable status, or once every attempt failed.
+            ``platform_name`` prefixes the message so the log names the webhook.
     """
     try:
         async for attempt in _retry_policy():
             with attempt:
                 async with httpx.AsyncClient(timeout=timeout_s) as client:
                     response = await client.post(url, json=body)
-                if response.status_code in _RETRYABLE_STATUS:
+                if response.status_code in _RETRYABLE_STATUS_CODES:
                     raise _RetryableHTTPError(
                         f"{platform_name} returned retryable {response.status_code}"
                     )
@@ -62,9 +68,5 @@ async def post_with_retry(
                     raise NotifierError(
                         f"{platform_name} webhook failed: {response.status_code} {response.text}"
                     )
-    except RetryError as exc:
-        raise NotifierError(
-            f"{platform_name} webhook failed after retries: {exc.last_attempt.exception()}"
-        ) from exc
     except (httpx.HTTPError, _RetryableHTTPError) as exc:
-        raise NotifierError(f"{platform_name} webhook failed: {exc}") from exc
+        raise NotifierError(f"{platform_name} webhook failed after retries: {exc}") from exc

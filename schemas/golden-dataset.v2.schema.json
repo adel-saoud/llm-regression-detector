@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "Difficulty": {
+      "description": "Optional case tag for slicing results; it does not change how a case is scored.",
+      "enum": [
+        "easy",
+        "medium",
+        "hard",
+        "adversarial"
+      ],
+      "title": "Difficulty",
+      "type": "string"
+    },
+    "GoldenCase": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "expected_category"
+          ]
+        },
+        {
+          "required": [
+            "reference_answer"
+          ]
+        },
+        {
+          "required": [
+            "rubric"
+          ]
+        }
+      ],
+      "description": "One labelled test case from the golden dataset.\n\nThe fields that are set decide how the case is scored, and the checks add up:\n``expected_category`` is compared to the predicted label by exact string match,\n``reference_answer`` and ``expected_summary_keywords`` guide the judge's 1 to 5\nquality score, and every ``rubric`` criterion gets its own pass or fail verdict.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "topic": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Topic"
+        },
+        "input_text": {
+          "title": "Input Text",
+          "type": "string"
+        },
+        "expected_category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Gold label, compared to the predicted category by exact string match.",
+          "title": "Expected Category"
+        },
+        "expected_summary_keywords": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Expected Summary Keywords",
+          "type": "array"
+        },
+        "reference_answer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A good answer the judge compares the predicted answer against.",
+          "title": "Reference Answer"
+        },
+        "rubric": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Criteria the answer must meet; the judge returns pass or fail for each.",
+          "title": "Rubric"
+        },
+        "difficulty": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Difficulty"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Provenance of the case, e.g. {'origin': 'trace-to-golden', 'trace': 'id'}.",
+          "title": "Source"
+        }
+      },
+      "required": [
+        "id",
+        "input_text"
+      ],
+      "title": "GoldenCase",
+      "type": "object"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/adel-saoud/llm-regression-detector/main/schemas/golden-dataset.v2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A schema v2 dataset file: ``{\"schema_version\": 2, \"cases\": [...]}``.\n\nThe wrapper makes the version explicit so loaders never guess it from fields.\nIts JSON Schema, ``schemas/golden-dataset.v2.schema.json``, is the contract that\nproducers in other repos (trace-to-golden) pin; ``$id`` carries the version.",
+  "properties": {
+    "schema_version": {
+      "const": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/GoldenCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "cases"
+  ],
+  "title": "Golden dataset v2",
+  "type": "object"
+}

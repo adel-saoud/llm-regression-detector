@@ -1,1 +1,1 @@
-"""Eval pipeline — runner, scorer, dataset loader."""
+"""Eval pipeline: runner, scorer, dataset loader."""

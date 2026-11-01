@@ -1,4 +1,4 @@
-"""Streamlit dashboard — accuracy timeline, CI band, drift, side-by-side diff.
+"""Streamlit dashboard: accuracy timeline, CI band, drift, side-by-side diff.
 
 Reads the SQLite store written by the runner. Path is configurable via the
 ``LRD_DB_PATH`` env var (set automatically when launched via ``lrd dashboard``).
@@ -10,17 +10,17 @@ because pandas, plotly, and streamlit don't ship type stubs.
 from __future__ import annotations
 
 import asyncio
-import os
-from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from llm_regression_detector.config import Settings
 from llm_regression_detector.diff.analyzer import Analyzer
 from llm_regression_detector.diff.drift import analyze_drift
 from llm_regression_detector.eval.dataset import EvalRun
+from llm_regression_detector.eval.stats import MIN_DRIFT_HISTORY
 from llm_regression_detector.storage.sqlite import SQLiteStorage
 
 st.set_page_config(
@@ -32,7 +32,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* ── Font — Plus Jakarta Sans via Google Fonts ─────────────────────── */
+    /* ── Font: Plus Jakarta Sans via Google Fonts ─────────────────────── */
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"], .stApp, .stMarkdown, .stMetric,
@@ -44,7 +44,7 @@ st.markdown(
     footer { visibility: hidden; }
     [data-testid="stHeader"] { display: none; }
 
-    /* ── Main content — breathing room ─────────────────────────────────── */
+    /* ── Main content: breathing room ─────────────────────────────────── */
     [data-testid="stMainBlockContainer"] {
         padding-top: 2.5rem;
         padding-bottom: 5rem;
@@ -72,7 +72,7 @@ st.markdown(
         margin-bottom: 0.75rem !important;
     }
 
-    /* ── KPI cards — clean card with tinted border ──────────────────────── */
+    /* ── KPI cards: clean card with tinted border ──────────────────────── */
     [data-testid="stMetric"] {
         background: rgba(99, 102, 241, 0.04);
         border: 1px solid rgba(99, 102, 241, 0.15);
@@ -84,7 +84,7 @@ st.markdown(
         border-color: rgba(99, 102, 241, 0.35);
     }
 
-    /* KPI label — opacity adapts automatically to light/dark theme */
+    /* KPI label: opacity adapts automatically to light/dark theme */
     [data-testid="stMetricLabel"] p {
         font-size: 0.65rem !important;
         font-weight: 600 !important;
@@ -94,7 +94,7 @@ st.markdown(
         margin-bottom: 0.2rem !important;
     }
 
-    /* KPI value — tabular nums, tight tracking */
+    /* KPI value: tabular nums, tight tracking */
     [data-testid="stMetricValue"] {
         font-variant-numeric: tabular-nums;
     }
@@ -114,7 +114,7 @@ st.markdown(
     }
 
     /* ── Caption / secondary text ────────────────────────────────────────── */
-    /* Don't override colour here — let Streamlit's theme vars handle it.
+    /* Don't override colour here: let Streamlit's theme vars handle it.
        Only fix the size so it's consistent everywhere.                        */
     [data-testid="stCaptionContainer"] p {
         line-height: 1.65;
@@ -133,7 +133,7 @@ st.markdown(
         padding-top: 1.5rem;
     }
 
-    /* Sidebar heading — bright white */
+    /* Sidebar heading: bright white */
     [data-testid="stSidebarUserContent"] h1,
     [data-testid="stSidebarUserContent"] h2 {
         font-size: 1rem !important;
@@ -142,7 +142,7 @@ st.markdown(
         color: #f9fafb !important;
     }
 
-    /* Sidebar body text — clearly readable on dark bg */
+    /* Sidebar body text: clearly readable on dark bg */
     [data-testid="stSidebarUserContent"] p,
     [data-testid="stSidebarUserContent"] span {
         font-size: 0.8rem !important;
@@ -150,7 +150,7 @@ st.markdown(
         line-height: 1.55 !important;
     }
 
-    /* Sidebar selectbox label — dimmed but readable on dark bg */
+    /* Sidebar selectbox label: dimmed but readable on dark bg */
     [data-testid="stSidebar"] label {
         font-size: 0.65rem !important;
         font-weight: 600 !important;
@@ -191,26 +191,21 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-DB_PATH = Path(os.environ.get("LRD_DB_PATH", "evals/runs.db"))
+# Streamlit "magic" renders bare module-level strings on the page, so the
+# constants below are documented with comments instead of attribute docstrings.
 
+# SQLite file to read; `lrd dashboard --db` passes it through LRD_DB_PATH.
+DB_PATH = Settings().db_path
 
-_CASE_CATEGORY = {"b": "Billing", "a": "Account", "t": "Technical", "g": "General"}
+# GitHub's success, attention and danger colours, readable on light and dark themes.
+_SEVERITY_COLOR = {"info": "#2da44e", "warning": "#9a6700", "critical": "#cf222e"}
+
+_SEVERITY_ICON = {"info": "🟢", "warning": "🟡", "critical": "🔴"}
 
 
 def _humanize(slug: str) -> str:
+    """``incident-triage`` → ``Incident Triage`` for titles and the prompt picker."""
     return slug.replace("-", " ").replace("_", " ").title()
-
-
-def _expand_case_id(case_id: str) -> str:
-    """b001 → 'Billing #1', a012 → 'Account #12', unknown prefix → unchanged."""
-    prefix = case_id[:1].lower()
-    num = case_id[1:].lstrip("0") or "0"
-    label = _CASE_CATEGORY.get(prefix, "")
-    return f"{label} #{num}" if label else case_id
-
-
-def _short(text: str, n: int = 70) -> str:
-    return text if len(text) <= n else text[:n].rstrip() + "…"
 
 
 def _compact_tokens(n: int) -> str:
@@ -222,24 +217,39 @@ def _compact_tokens(n: int) -> str:
     return f"{n} tokens"
 
 
-def _severity_card(severity: str, delta_pp: float, sig_marker: str) -> None:
-    color = {"info": "#2da44e", "warning": "#9a6700", "critical": "#cf222e"}[severity]
-    icon = {"info": "🟢", "warning": "🟡", "critical": "🔴"}[severity]
+def _severity_card(
+    severity: str, delta_pp: float, significance_marker: str, *, large_gain: bool
+) -> None:
+    """Coloured banner with the verdict and the size of the accuracy change.
+
+    A large gain stays INFO but gets its own line: a jump that size more often
+    comes from a changed judge model or dataset than from a better prompt.
+    """
+    color = _SEVERITY_COLOR[severity]
+    icon = _SEVERITY_ICON[severity]
     direction = "drop" if delta_pp < 0 else "gain"
     st.markdown(
         f'<div style="background:{color}18;border:1px solid {color}44;border-radius:10px;'
         f'padding:12px 16px;margin:10px 0;">'
         f'<span style="font-size:1.15rem;font-weight:700;color:{color};">'
         f"{icon} {severity.upper()}</span>"
-        f'<span style="font-size:0.95rem;opacity:0.85;"> — '
-        f"{abs(delta_pp):.1f} pp {direction}{sig_marker}</span>"
-        f"</div>",
+        f'<span style="font-size:0.95rem;opacity:0.85;"> · '
+        f"{abs(delta_pp):.1f} pp {direction}{significance_marker}</span>"
+        + (
+            '<div style="font-size:0.9rem;margin-top:6px;">🔎 <b>Large gain: check the '
+            "judge or dataset.</b></div>"
+            if large_gain
+            else ""
+        )
+        + "</div>",
         unsafe_allow_html=True,
     )
 
 
 @st.cache_data(ttl=10)
 def _load_recent(prompt_name: str | None, limit: int = 50) -> list[EvalRun]:
+    """Newest runs of one prompt, cached 10 s so widget reruns do not reopen the database."""
+
     async def _go() -> list[EvalRun]:
         storage = SQLiteStorage(DB_PATH)
         await storage.initialize()
@@ -252,6 +262,7 @@ def _load_recent(prompt_name: str | None, limit: int = 50) -> list[EvalRun]:
 
 @st.cache_data(ttl=10)
 def _list_prompts() -> list[str]:
+    """Prompt names with stored runs; a plain query, so no async loop for one column."""
     import sqlite3
 
     if not DB_PATH.exists():
@@ -262,6 +273,7 @@ def _list_prompts() -> list[str]:
 
 
 def _runs_to_df(runs: list[EvalRun]) -> pd.DataFrame:
+    """One row per run with the summary columns the charts and KPI cards read."""
     return pd.DataFrame(
         [
             {
@@ -297,13 +309,14 @@ if not prompts:
     st.title("👋 Welcome to LLM Regression Detector")
     st.markdown("No evaluations recorded yet. Follow these steps to run your first eval.")
 
-    with st.expander("Step 1 — Build your test set", expanded=True):
+    with st.expander("Step 1: Build your test set", expanded=True):
         st.markdown("""
     Create a JSON file at `golden_dataset/my_dataset.json`. Each case needs:
-    - **`id`** — unique slug (e.g. `b001`)
-    - **`topic`** — human label shown in the dashboard (e.g. `"Duplicate charge — refund"`)
-    - **`input_text`** — the text your LLM will receive
-    - **`expected_category`** — the correct answer your LLM should produce
+    - **`id`**: unique slug (e.g. `b001`)
+    - **`topic`**: human label shown in the dashboard (e.g. `"Duplicate charge, refund"`)
+    - **`input_text`**: the text your LLM will receive
+    - **`expected_category`**: the correct label your LLM should produce, and/or
+      **`reference_answer`** and **`rubric`** for free-text answers (dataset schema v2)
 
     👉 See `docs/golden-dataset-guide.md` for the full schema and a worked example.
 
@@ -313,13 +326,13 @@ if not prompts:
     ```
     """)
 
-    with st.expander("Step 2 — Write your prompt", expanded=True):
+    with st.expander("Step 2: Write your prompt", expanded=True):
         st.markdown("""
     Create a YAML at `prompts/my_prompt_v1.yaml` (or let `lrd init` generate one).
     The YAML defines your system prompt, few-shot examples, and the user template.
     """)
 
-    with st.expander("Step 3 — Run your first evaluation (baseline)", expanded=True):
+    with st.expander("Step 3: Run your first evaluation (baseline)", expanded=True):
         st.markdown("""
     ```bash
     uv run lrd run -p prompts/my_prompt_v1.yaml --no-diff
@@ -327,14 +340,14 @@ if not prompts:
     This stores the baseline. The dashboard will populate after this run.
     """)
 
-    with st.expander("Step 4 — Compare a new version", expanded=False):
+    with st.expander("Step 4: Compare a new version", expanded=False):
         st.markdown("""
     After changing your prompt or model:
     ```bash
     uv run lrd run -p prompts/my_prompt_v2.yaml
     ```
     The detector diffs vs the baseline using Wilson 95% confidence intervals.
-    If the drop is statistically significant it exits non-zero — blocking the merge.
+    If the drop is statistically significant it exits non-zero: blocking the merge.
     """)
 
     st.stop()
@@ -348,13 +361,13 @@ prompt_name = st.sidebar.selectbox(
 runs = _load_recent(prompt_name)
 df = _runs_to_df(runs)
 
-# Sidebar status badge — show latest diff result at a glance
+# Sidebar status badge: show latest diff result at a glance
 if len(runs) >= 2 and not df.empty:
     _status_diff = Analyzer().diff(runs[1], runs[0])
     _delta = _status_diff.accuracy_delta * 100
     _sev = _status_diff.severity.value
-    _icon = {"info": "🟢", "warning": "🟡", "critical": "🔴"}[_sev]
-    _color = {"info": "#2da44e", "warning": "#9a6700", "critical": "#cf222e"}[_sev]
+    _icon = _SEVERITY_ICON[_sev]
+    _color = _SEVERITY_COLOR[_sev]
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Latest change**")
     st.sidebar.markdown(
@@ -368,14 +381,16 @@ if len(runs) >= 2 and not df.empty:
 st.sidebar.markdown("---")
 with st.sidebar.expander("ℹ️ How to read this"):
     st.markdown("""
-**KPI cards** — latest run at a glance. Delta is vs the previous run.
+**KPI cards**: latest run at a glance. Delta is vs the previous run.
 
-**Accuracy history** — each point is one eval run. The shaded band is the 95% CI.
+**Accuracy history**: each point is one eval run. The shaded band is the 95% CI.
 Overlapping bands = difference is within noise.
 
-**Version comparison** — pick any two runs to diff. Wilson CIs decide if a drop is real or noise.
+**Version comparison**: pick any two runs to diff. Wilson CIs decide if a drop is real or noise.
+Only drops and flipped cases raise the severity; a large gain is flagged
+so you check the judge or dataset.
 
-**Got worse / Got better tabs** — individual test cases that changed between versions.
+**Got worse / Got better tabs**: individual test cases that changed between versions.
 """)
 
 # ── Header ───────────────────────────────────────────────────────────────────
@@ -451,11 +466,11 @@ col5.metric(
 
 # ── Drift summary ───────────────────────────────────────────────────────────
 
-if len(runs) >= 6:
+if len(runs) > MIN_DRIFT_HISTORY:
     drift = analyze_drift(runs[1:], runs[0])
     if drift.has_drift:
         st.error(
-            f"⚠ **Gradual quality drop detected** — "
+            f"⚠ **Gradual quality drop detected**: "
             f"current accuracy {drift.latest_accuracy * 100:.1f}% "
             f"has fallen below the expected floor of {drift.threshold * 100:.1f}% "
             f"(average over the last {drift.window_size} runs: "
@@ -463,7 +478,7 @@ if len(runs) >= 6:
         )
     else:
         st.caption(
-            f"✓ Quality stable — no gradual decline detected across the last "
+            f"✓ Quality stable: no gradual decline detected across the last "
             f"{drift.window_size} runs "
             f"(avg {drift.moving_average * 100:.1f}%, "
             f"±{drift.std_dev * 100:.1f}% variation)"
@@ -486,7 +501,7 @@ col_left, col_right = st.columns([3, 2], gap="large")
 with col_left:
     st.subheader("Accuracy history")
     st.caption(
-        "Each point is one eval run. The shaded band is the 95% confidence range — "
+        "Each point is one eval run. The shaded band is the 95% confidence range: "
         "if two bands overlap, the difference is within statistical noise."
     )
     df_sorted = df.sort_values("timestamp").reset_index(drop=True)
@@ -592,11 +607,11 @@ with col_right:
         if baseline and candidate and baseline.run_id != candidate.run_id:
             diff = Analyzer().diff(baseline, candidate)
             delta_pp = diff.accuracy_delta * 100
-            sig_marker = "" if diff.is_significant else " (within noise)"
-            _severity_card(diff.severity.value, delta_pp, sig_marker)
-            _cand_topic = {
-                r.case_id: (r.topic or _expand_case_id(r.case_id)) for r in candidate.results
-            }
+            significance_marker = "" if diff.is_significant else " (within noise)"
+            _severity_card(
+                diff.severity.value, delta_pp, significance_marker, large_gain=diff.large_gain
+            )
+            _cand_topic = {r.case_id: (r.topic or r.case_id) for r in candidate.results}
 
             # Per-category breakdown
             if baseline.summary.per_category and candidate.summary.per_category:
@@ -666,7 +681,7 @@ if diff is not None and baseline is not None and candidate is not None:
                 width="stretch",
             )
         else:
-            st.success("No regressions — quality held across all test cases.")
+            st.success("No regressions: quality held across all test cases.")
     with tab_imp:
         if diff.improvements:
             st.dataframe(
@@ -692,8 +707,13 @@ if diff is not None and baseline is not None and candidate is not None:
                     {
                         "Topic": r.topic or r.case_id,
                         "Result": "✓ Pass" if r.passed else "✗ Fail",
-                        "AI prediction": r.predicted_category,
+                        "AI prediction": r.predicted_category or "-",
                         "Score (1–5)": r.judge.summary_score,
+                        "Rubric": (
+                            f"{sum(c.passed for c in r.judge.criteria)}/{len(r.judge.criteria)}"
+                            if r.judge.criteria
+                            else "-"
+                        ),
                         "Latency (ms)": round(r.latency_ms, 1),
                     }
                     for r in candidate.results

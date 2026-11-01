@@ -15,11 +15,14 @@ _COLOUR: dict[AlertSeverity, str] = {
 
 
 class SlackNotifier:
+    """Posts alerts to a Slack incoming webhook as Block Kit in a severity-coloured attachment."""
+
     def __init__(self, *, webhook_url: str, timeout_s: float = 10.0) -> None:
         self._webhook_url = webhook_url
         self._timeout_s = timeout_s
 
     async def send(self, payload: AlertPayload) -> None:
+        """Deliver with the shared retry policy; ``NotifierError`` when it gives up."""
         await post_with_retry(
             self._webhook_url,
             body=self._format(payload),
@@ -29,6 +32,7 @@ class SlackNotifier:
 
     @staticmethod
     def _format(payload: AlertPayload) -> dict[str, Any]:
+        """Platform body; ID lists are cut at 10 so long runs stay within message limits."""
         delta_pp = payload.accuracy_delta * 100
         fields: list[dict[str, Any]] = [
             {"type": "mrkdwn", "text": f"*Accuracy Δ*\n{delta_pp:+.2f} pp"},

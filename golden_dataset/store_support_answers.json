@@ -1,0 +1,88 @@
+{
+  "schema_version": 2,
+  "cases": [
+    {
+      "id": "ret001",
+      "topic": "Return window for an unopened kettle",
+      "input_text": "I bought an electric kettle 10 days ago and never opened the box. Can I still return it?",
+      "expected_category": "ANSWER",
+      "reference_answer": "Yes. Unopened items can be returned within 30 days of delivery for a full refund. Start the return from your order page.",
+      "rubric": [
+        "States that the return is allowed",
+        "Mentions the 30-day return window",
+        "Tells the customer where to start the return"
+      ],
+      "source": {"origin": "hand-written"}
+    },
+    {
+      "id": "ret002",
+      "topic": "Return after the window closed",
+      "input_text": "My toaster arrived two months ago and I want to send it back because I don't like the colour.",
+      "expected_category": "ANSWER",
+      "rubric": [
+        "Explains that the 30-day return window has passed",
+        "Does not promise a refund",
+        "Offers an alternative such as warranty support for defects"
+      ]
+    },
+    {
+      "id": "war001",
+      "topic": "Warranty claim for a faulty blender",
+      "input_text": "The motor of my blender stopped working after 8 months. What can I do?",
+      "expected_category": "ANSWER",
+      "reference_answer": "Small appliances carry a 2-year warranty. Open a warranty claim from your order page with a short description and a photo of the product label.",
+      "rubric": [
+        "Mentions the 2-year warranty",
+        "Explains how to open a warranty claim"
+      ]
+    },
+    {
+      "id": "ord001",
+      "topic": "Order status without an order number",
+      "input_text": "Where is my order?",
+      "expected_category": "CLARIFY",
+      "rubric": [
+        "Asks which order the customer means or for the order number",
+        "Does not invent a delivery date"
+      ]
+    },
+    {
+      "id": "prd001",
+      "topic": "Coffee machine capacity question",
+      "input_text": "How many cups does the 1.8 litre drip coffee maker make?",
+      "reference_answer": "The 1.8 litre drip coffee maker brews up to 12 cups.",
+      "expected_summary_keywords": ["12 cups"]
+    },
+    {
+      "id": "prd002",
+      "topic": "Comparing two vacuum cleaners",
+      "input_text": "What is the difference between the cordless stick vacuum and the bagless cylinder vacuum?",
+      "rubric": [
+        "Names a difference in power source (battery versus mains)",
+        "Names a difference in use case or capacity",
+        "Stays neutral and does not invent prices"
+      ]
+    },
+    {
+      "id": "dec001",
+      "topic": "Out-of-scope medical question",
+      "input_text": "Which medication should I take for a headache?",
+      "expected_category": "DECLINE",
+      "rubric": [
+        "Politely declines to give medical advice",
+        "Redirects to what the store assistant can help with"
+      ]
+    },
+    {
+      "id": "pii001",
+      "topic": "Customer shares card number in chat",
+      "input_text": "Can you refund my order to card <CREDIT_CARD>? My phone is <PHONE_NUMBER>.",
+      "expected_category": "ANSWER",
+      "rubric": [
+        "Does not repeat the card number or phone number",
+        "Explains that refunds go back to the original payment method"
+      ],
+      "source": {"origin": "trace-to-golden", "trace": "example-0001"}
+    }
+  ]
+}

@@ -5,12 +5,25 @@ from __future__ import annotations
 from llm_regression_detector.diff.analyzer import DiffReport
 from llm_regression_detector.diff.drift import DriftReport
 from llm_regression_detector.eval.dataset import EvalRun
+from llm_regression_detector.eval.stats import MIN_DRIFT_HISTORY
 from llm_regression_detector.notify.base import AlertSeverity
+
+_MAX_LISTED_REGRESSIONS = 15
+"""Regressed case ids listed before "and N more", so a broken prompt keeps the comment short."""
+
+_MAX_LISTED_IMPROVEMENTS = 10
+"""Improved case ids listed; improvements matter less than regressions in review."""
+
+_LARGE_GAIN_NOTE = (
+    "🔎 **Large gain: check the judge or dataset.** A jump this size more often comes "
+    "from a changed judge model or dataset than from a better prompt."
+)
+"""Shown when accuracy rises by at least ``Thresholds.critical_pp``; severity stays INFO."""
 
 _SEVERITY_HEADER: dict[AlertSeverity, str] = {
     AlertSeverity.INFO: "✅ **No regression detected**",
     AlertSeverity.WARNING: "⚠️ **Regression detected**",
-    AlertSeverity.CRITICAL: "🚨 **Critical regression — merge blocked**",
+    AlertSeverity.CRITICAL: "🚨 **Critical regression: merge blocked**",
 }
 
 
@@ -21,45 +34,54 @@ def render_pr_comment(
     drift: DriftReport | None = None,
     report_url: str | None = None,
 ) -> str:
-    """Build the body of a GitHub PR comment summarising the eval run."""
+    """Build the body of a GitHub PR comment summarising the eval run.
+
+    Without a baseline the comment only says the run becomes the baseline; the
+    drift section appears once enough history exists for the check to run.
+    """
     lines: list[str] = ["## LLM Regression Report", ""]
 
     if diff is None:
-        lines.append("ℹ️ No baseline found for this prompt — recording as the new baseline.")
+        lines.append("ℹ️ No baseline found for this prompt: recording as the new baseline.")
     else:
         lines.append(_SEVERITY_HEADER[diff.severity])
         lines.append("")
+        if diff.large_gain:
+            lines.append(_LARGE_GAIN_NOTE)
+            lines.append("")
         delta_pp = diff.accuracy_delta * 100
-        sig_note = "✓ statistically significant" if diff.is_significant else "⚠ within noise"
+        significance_note = (
+            "✓ statistically significant" if diff.is_significant else "⚠ within noise"
+        )
         lines.append("| Metric | Baseline | Candidate | Δ |")
         lines.append("| --- | --- | --- | --- |")
-        baseline_acc = candidate.summary.accuracy - diff.accuracy_delta
+        baseline_accuracy = candidate.summary.accuracy - diff.accuracy_delta
         lines.append(
-            f"| Accuracy | {baseline_acc * 100:.1f}% | "
+            f"| Accuracy | {baseline_accuracy * 100:.1f}% | "
             f"**{candidate.summary.accuracy * 100:.1f}%** | "
-            f"`{delta_pp:+.2f} pp` ({sig_note}) |"
+            f"`{delta_pp:+.2f} pp` ({significance_note}) |"
         )
         lines.append(
-            f"| 95% CI (candidate) | — | "
+            f"| 95% CI (candidate) | n/a | "
             f"{candidate.summary.accuracy_ci_low * 100:.1f}–"
-            f"{candidate.summary.accuracy_ci_high * 100:.1f}% | — |"
+            f"{candidate.summary.accuracy_ci_high * 100:.1f}% | n/a |"
         )
         lines.append(
-            f"| Cases passed | — | {candidate.summary.cases_passed}/"
-            f"{candidate.summary.cases_total} | — |"
+            f"| Cases passed | n/a | {candidate.summary.cases_passed}/"
+            f"{candidate.summary.cases_total} | n/a |"
         )
         lines.append(
-            f"| Avg summary score | — | {candidate.summary.avg_summary_score:.2f} / 5 | — |"
+            f"| Avg summary score | n/a | {candidate.summary.avg_summary_score:.2f} / 5 | n/a |"
         )
         lines.append(
-            f"| Latency p50 / p95 / p99 | — | "
+            f"| Latency p50 / p95 / p99 | n/a | "
             f"{candidate.summary.latency_p50_ms:.0f} / "
             f"{candidate.summary.latency_p95_ms:.0f} / "
-            f"{candidate.summary.latency_p99_ms:.0f} ms | — |"
+            f"{candidate.summary.latency_p99_ms:.0f} ms | n/a |"
         )
         if candidate.summary.estimated_cost_usd > 0:
             lines.append(
-                f"| Estimated cost | — | ${candidate.summary.estimated_cost_usd:.4f} | — |"
+                f"| Estimated cost | n/a | ${candidate.summary.estimated_cost_usd:.4f} | n/a |"
             )
         lines.append("")
 
@@ -68,30 +90,31 @@ def render_pr_comment(
             lines.append("")
             lines.append("| Category | Accuracy | Passed |")
             lines.append("| --- | --- | --- |")
-            for cat in candidate.summary.per_category:
+            for category in candidate.summary.per_category:
                 lines.append(
-                    f"| `{cat.category}` | {cat.accuracy * 100:.1f}% | "
-                    f"{cat.cases_passed}/{cat.cases_total} |"
+                    f"| `{category.category}` | {category.accuracy * 100:.1f}% | "
+                    f"{category.cases_passed}/{category.cases_total} |"
                 )
             lines.append("")
 
         if diff.regressions:
             lines.append(f"### Regressions ({len(diff.regressions)})")
             lines.append("")
-            for r in diff.regressions[:15]:
-                lines.append(f"- `{r.case_id}` — was PASS, now FAIL")
-            if len(diff.regressions) > 15:
-                lines.append(f"- _…and {len(diff.regressions) - 15} more_")
+            for regression in diff.regressions[:_MAX_LISTED_REGRESSIONS]:
+                lines.append(f"- `{regression.case_id}`: was PASS, now FAIL")
+            if len(diff.regressions) > _MAX_LISTED_REGRESSIONS:
+                hidden_count = len(diff.regressions) - _MAX_LISTED_REGRESSIONS
+                lines.append(f"- _…and {hidden_count} more_")
             lines.append("")
 
         if diff.improvements:
             lines.append(f"### Improvements ({len(diff.improvements)})")
             lines.append("")
-            for i in diff.improvements[:10]:
-                lines.append(f"- `{i.case_id}` — was FAIL, now PASS")
+            for improvement in diff.improvements[:_MAX_LISTED_IMPROVEMENTS]:
+                lines.append(f"- `{improvement.case_id}`: was FAIL, now PASS")
             lines.append("")
 
-    if drift is not None and drift.window_size >= 5:
+    if drift is not None and drift.window_size >= MIN_DRIFT_HISTORY:
         lines.append("### Slow-drift check")
         lines.append("")
         if drift.has_drift:

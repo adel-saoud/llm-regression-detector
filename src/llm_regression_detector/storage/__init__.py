@@ -1,1 +1,1 @@
-"""Persistence — SQLite-backed baseline and run history."""
+"""Persistence: SQLite-backed baseline and run history."""

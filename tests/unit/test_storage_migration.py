@@ -9,6 +9,7 @@ from pathlib import Path
 import aiosqlite
 
 from llm_regression_detector.storage.sqlite import SQLiteStorage
+from tests.conftest import make_run
 
 
 async def test_legacy_row_is_loaded_with_default_fields(tmp_path: Path) -> None:
@@ -35,7 +36,7 @@ async def test_legacy_row_is_loaded_with_default_fields(tmp_path: Path) -> None:
                 "error": None,
             }
         ],
-        # ↓ summary as it would have looked in schema v0 — no CI, no percentiles
+        # ↓ summary as it would have looked in schema v0: no CI, no percentiles
         "summary": {
             "accuracy": 1.0,
             "avg_summary_score": 4.0,
@@ -81,3 +82,41 @@ async def test_schema_version_is_recorded(tmp_path: Path) -> None:
     await storage.initialize()
     version = await storage.schema_version()
     assert version >= 1
+
+
+async def test_schema_v1_row_without_rubric_fields_loads(tmp_path: Path) -> None:
+    """Runs stored before dataset schema v2 have no criteria or answer fields; they still load."""
+    db_path = tmp_path / "runs.db"
+    storage = SQLiteStorage(db_path)
+    await storage.initialize()
+    run = make_run("v1-row", pass_ids=["a"], fail_ids=[])
+    payload = json.loads(run.model_dump_json())
+    for result in payload["results"]:
+        result.pop("predicted_answer")
+        result["judge"].pop("criteria")
+
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            """
+            INSERT INTO eval_runs
+                (run_id, prompt_name, prompt_version, timestamp, accuracy,
+                 schema_version, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "v1-row",
+                run.prompt_name,
+                run.prompt_version,
+                payload["timestamp"],
+                1.0,
+                1,
+                json.dumps(payload),
+            ),
+        )
+        await db.commit()
+
+    loaded = await storage.get("v1-row")
+    assert loaded is not None
+    assert loaded.results[0].judge.criteria == []
+    assert loaded.results[0].predicted_answer is None
+    assert loaded.results[0].passed

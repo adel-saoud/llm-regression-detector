@@ -109,7 +109,7 @@ uv run pre-commit run --all-files   # ruff, pyright strict, gitleaks
 uv run pytest                       # coverage floor 90%
 ```
 
-Releases: `uv run cz bump` updates the version, `CHANGELOG.md` and the `v*` tag; the GitHub release is written from that CHANGELOG entry. The package is not on PyPI; install it from GitHub with `uv tool install git+https://github.com/adel-saoud/llm-regression-detector`. Dataset format: [docs/golden-dataset-guide.md](docs/golden-dataset-guide.md). Planned GitHub Action: [docs/github-action.md](docs/github-action.md). Extension points: [docs/extending.md](docs/extending.md).
+Releases: `uv run cz bump` updates the version and the `v*` tag once the `[Unreleased]` CHANGELOG section is renamed to the version; the GitHub release is written from that entry. The package is not on PyPI; install it from GitHub with `uv tool install git+https://github.com/adel-saoud/llm-regression-detector`. Dataset format: [docs/golden-dataset-guide.md](docs/golden-dataset-guide.md). Planned GitHub Action: [docs/github-action.md](docs/github-action.md). Extension points: [docs/extending.md](docs/extending.md).
 
 ## License
 
